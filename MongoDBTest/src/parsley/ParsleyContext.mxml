@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Objects xmlns:fx="http://ns.adobe.com/mxml/2009"
+	   xmlns="http://www.spicefactory.org/parsley"
+       xmlns:s="library://ns.adobe.com/flex/spark"
+       xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:mongo="as3.mongo.*" xmlns:modele="modele.*" xmlns:newjmcnetds="newjmcnetds.*" xmlns:driver="jmcnet.mongodb.driver.*"
+	   >
+	<fx:Script>
+		<![CDATA[
+			import commun.Constantes;
+			
+			import presentation.Main;
+		]]>
+	</fx:Script>
+
+  <fx:Declarations>
+	  <!-- Les singletons -->
+	  <driver:JMCNetMongoDBDriver id="mongoDriver"
+				hostname="{Constantes.mongoDbHostname}"
+				port="{Constantes.mongoDbHostPort}"
+				databaseName="{Constantes.mongoDbDatabaseName}"
+				socketPoolMin="10"
+				socketPoolMax="20"
+				socketTimeOutMs="10000"
+				username="jmc"
+				password="jmc"
+				logBSON="false"
+				logDocument="false"/>
+	  
+	  <!-- Modeles -->
+	  <modele:ModeleCommun id="modeleCommun"/>
+	  
+	  <!-- Views -->
+	  <View type="{Main}"/>
+	  
+  </fx:Declarations>
+</Objects>
