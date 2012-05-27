@@ -13,20 +13,91 @@ This page will explain, how to initialize the driver. This means :
 
 = Details =
 
-Initialization of the driver is done by this block of code :
+First, you must be aware that there must be one JMCNetMongoDBDriver object par database.
+
+== Driver instantiation ==
+Initialization of the driver for one database is done by this block of code :
 {{{
-<driver:JMCNetMongoDBDriver id="mongoDriver"
-				hostname="{Constantes.mongoDbHostname}"
-				port="{Constantes.mongoDbHostPort}"
-				databaseName="{Constantes.mongoDbDatabaseName}"
+<fx:Declarations>
+    <driver:JMCNetMongoDBDriver id="mongoDriver"
+				hostname="[String]"
+				port="[uint]"
+				databaseName="[String]"
+				socketPoolMin="[uint]"
+				socketPoolMax="[uint]"
+				socketTimeOutMs="[uint]"
+				username="[String]"
+				password="[String]"
+				logBSON="[Boolean]"
+				logDocument="[Boolean]"/>
+</fx:Declarations>
+}}}
+
+The parameters are the following :
+  * *hostname*(1) (String) : the MongoDB server's hostname,
+  * *port* (uint) : the MongoDB server's port. Default value is 27017,
+  * *databaseName*(1) (String) : the database's name this driver is dedicated to,
+  * *socketPoolMin* (uint) : the min number of connection in the pool. Default value is 10,
+  * *socketPoolMax* (uint) : the max number of connection in the pool. Default value is 50,
+  * *socketTimeOutMs* (uint) : the socket timeout in milliseconds. Default value is 10 seconds,
+  * *username* (String) : username used for authentication. If null, driver is in non authenticate mode. Default value is null,
+  * *password* (String) : password of the user for authentication. This password must be non encrypted. Default value is null,
+  * logBSON (Boolean) : if true trace BSON encoding/decoding. Default value is false,
+  * logDocument (Boolean) : if true trace all Document manipulation. Default value is false.
+
+(1) : parameter *MUST* be provided.
+
+Exemples :
+
+Full initialization :
+{{{
+<fx:Declarations>
+    <driver:JMCNetMongoDBDriver id="mongoDriver"
+				hostname="myserverhostname"
+				port="27080"
+				databaseName="mydatabase"
 				socketPoolMin="10"
 				socketPoolMax="20"
-				socketTimeOutMs="10000"
-				username="jmc"
-				password="jmc"
+				socketTimeOutMs="60000"
+				username="myuser"
+				password="mypassword"
 				logBSON="false"
-				logDocument="false"/>
+				logDocument="true"/>
+<fx:Declarations>
 }}}
+
+Mininal initialization :
+{{{
+<fx:Declarations>
+    <driver:JMCNetMongoDBDriver id="mongoDriver"
+				hostname="myserverhostname"
+				databaseName="mydatabase"/>
+<fx:Declarations>
+}}}
+
+== Safe mode ==
+The driver can be configured to use safe mode (cf. mongoDB documentation for more information) .
+
+There is 5 safe mode you can use (from less to more secure) :
+  # SAFE_MODE_NONE : writes returns immediately without any check. Don't even check for network error,
+  # SAFE_MODE_NORMAL :  don't call getLastError by default but check for network error. This is default value,
+  # SAFE_MODE_SAFE : call getLastError after update, insert or delete, but don't wait for slave. This call is done in the same socket,
+  # SAFE_MODE_MAJORITY : writes returns when the data are replicated on a majority of servers,
+  # SAFE_MODE_REPLICAS_SAFE : call getLastError and wait for slaves to complete operation
+
+When safe mode is > SAFE_MODE_SAFE, you can provide a callback function that will be called on each update, insert or delete operation. See writes operations for more informations.
+
+Safe mode is done by calling the _setWriteConcern_ of the driver :
+{{{
+// Set safeMode
+mongoDriver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_SAFE);
+}}}
+
+_setWriteConcern_ takes some others parameters to complete the safe mode :
+  * wTimeout (uint) : the time max to wait for an answer in millisecond. If 0 the wait is infinite. Default value is 10 seconds.
+  * fsync (Boolean) : if true, wait for data to be written on disk. Default value is false,
+  * journal (Boolean) : if true, wait for the journalization of data. Default value is false.
+
 
 = See also =
   * [Home],
