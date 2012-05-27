@@ -17,6 +17,14 @@ public function dropCollection(collectionName:String,  safeCallback:Function = n
 public function renameCollection(collectionName:String, newCollectionName:String, safeCallback:Function = null):void
 }}}
 
+_safeCallback_ is called by the driver when the answer is received from database.
+It must be a method with these signature :
+{{{
+private function onResponseReady (response:MongoDocumentResponse):void {
+	// Response is received
+}
+}}}
+
 = See also =
 
   * [Home]
