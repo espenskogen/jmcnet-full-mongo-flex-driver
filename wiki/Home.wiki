@@ -18,13 +18,13 @@ Main features are :
   # ObjectID helper.
 
 = Quick index =
-  * Installation,
-  * Driver initialization,
-  * Collection manipulation (create, drop),
-  * Running commands,
-  * CRUD (Create, Retrieve, Update, Delete),
-  * Querying (Find, FindOne, getMore, killCursor),
-  * Count,
-  * Distinct,
-  * Group,
-  * MapReduce,
+  * [Installation],
+  * [Driver initialization] (connection pooling, safe mode),
+  * [Collection manipulation] (create, drop),
+  * [Running commands],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Count],
+  * [Distinct],
+  * [Group],
+  * [MapReduce]
