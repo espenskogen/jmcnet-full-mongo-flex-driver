@@ -1,0 +1,10 @@
+#summary Installation of the JMCNet Full MongoDB Flex Driver
+
+= Details =
+
+Installation is very easy. Just download the last driver swc file ([http://code.google.com/p/jmcnet-full-mongo-flex-driver/download here] and the _JMCNet Commons Library_ swc [http://code.google.com/p/jmcnet/download here]).
+
+Make your build path points to these swc files, and you are ready to use !
+
+= See also =
+<wiki:toc max_depth="1" />
