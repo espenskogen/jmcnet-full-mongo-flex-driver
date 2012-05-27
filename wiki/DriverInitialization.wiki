@@ -1,0 +1,16 @@
+#summary Driver initialization
+
+<wiki:toc max_depth="1" />
+
+= Introduction =
+
+This page will explain, how to initialize the driver. This means :
+  # Initialize the connection with the server,
+  # Initialize the pool of connection,
+  # Initialize the safe mode,
+  # Initialize the logging mode.
+
+
+= Details =
+
+Initialization of the driver is done by this block of code :
