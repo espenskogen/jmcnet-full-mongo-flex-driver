@@ -7,4 +7,15 @@ This project aims to provide to the community a full and reliable Flex Driver fo
 
 = Details =
 
-The main capabilities of this driver are the following :
+Main features are :
+  # Connexion pooling,
+  # Safe mode enabling,
+  # Direct CRUD object manipulation,
+  # Full Aggregation support (group, MapReduce, ...),
+  # BSON encoder and decoder,
+  # ObjectID helper.
+
+= Quick index =
+  * Installation,
+  * Driver initialisation,
+  * 
