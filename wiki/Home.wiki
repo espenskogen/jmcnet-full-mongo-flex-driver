@@ -1,13 +1,10 @@
-#summary One-sentence summary of this page.
+#summary Introduction to the JMCNet Full MongoDB Flex Driver.
 
 = Introduction =
 
-Add your content here.
+This project aims to provide to the community a full and reliable Flex Driver for [http://www.mongodb.org/ MongoDB]. Some others initiatives exists, but I found it unusable in a professionnal environment. 
 
 
 = Details =
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+The main capabilities of this driver are the following :
