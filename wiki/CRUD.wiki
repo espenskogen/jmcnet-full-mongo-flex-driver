@@ -35,12 +35,12 @@ Examples :
 // insert 2 TestVO object, don't wait for answer
 mongoDriver.insertDoc("documentsCollectionName", [new TestVO("StringValue1",18,253.1234,true), new TestVO("StringOther2",19,254.1234,false)], null, true);
 
-// Insert a native Flex Object, when done onLastErrorCallback is called
+// Insert a native Flex Object, when done callbackMethod is called
 var obj:Object = new Object();
 obj.attr1 = 1;
 obj.attrInt32=22;
 obj._id = null;
-mongoDriver.insertDoc("documentsCollectionName", [obj], onLastErrorCallback, true);
+mongoDriver.insertDoc("documentsCollectionName", [obj], callbackMethod, true);
 
 // Insert a single String (key is '')
 mongoDriver.insertDoc("documentsCollectionName", ["a simple String"]);
@@ -132,7 +132,35 @@ mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallba
 doc = new MongoDocumentUpdate();
 doc.addUpdateCriteria("root.attrInt32", 256);
 doc.addSelectorCriteria("root.attrInt32", 18);
-mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false, false);
+mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, callbackMethod, false, false);
+}}}
+
+== Deleting documents ==
+To delete documents you call the following method on the driver object :
+{{{
+/**
+ * Delete one or more documents of a collection.
+ * @param collectionName (String) : the name of the collection,
+ * @param delete (MongoDocumentDelete) : the delete query,
+ * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode),
+ * @param singleRemove (Boolean) : if true perform a single remove. Default value is false.
+ */
+public function deleteDoc(collectionName:String, doc:MongoDocumentDelete, safeCallback:Function = null, singleRemove:Boolean=false):void
+}}}
+
+Examples :
+{{{
+// delete all docs where root.attrString = "newValue"
+var doc:MongoDocumentDelete = new MongoDocumentDelete();
+doc.addSelectorCriteria("root.attrString", "newValue");
+mongoDriver.deleteDoc("documentsCollectionName", doc, callbackMethod, false);
+
+// Delete the first doc where attrString1="newValue" OR attrString2="otherValue"
+mongoDriver.deleteDoc(Constantes.documentsCollectionName,
+	new MongoDocumentDelete(MongoDocument.or(
+		new MongoDocument("attrString1", "newValue"),
+		new MongoDocument("attrString2", "otherValue"))),
+	onLastErrorCallback, true);
 }}}
 
 = See also =
