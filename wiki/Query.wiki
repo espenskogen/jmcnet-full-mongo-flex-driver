@@ -1,0 +1,150 @@
+#summary Most complete query example
+
+<wiki:toc max_depth="2" />
+
+= Introduction =
+
+This page will explain, how to use send more complex query. This means :
+  # use of operators,
+  # regexp query,
+  # cursor functions :
+    # getMore function for pagination,
+    # killCursor
+
+= Details =
+
+== Complex queries using operator ==
+Queries to database are send using the _queryDoc_ driver's method. [CRUD here] you will found simples examples of using _queryDoc_.
+
+For more complex query, the driver offers the possibility to use all available MongoDB's operators. Cf. [http://www.mongodb.org/display/DOCS/Querying]
+For this, use addQueryCriteria with criterias chained.
+
+Here are examples :
+{{{
+// Find documents where attrInt32 >= 19 and attrInt32 < 22
+var query:MongoDocumentQuery = new MongoDocumentQuery();
+query.addQueryCriteria("attrInt32", MongoDocument.gte(19).lt(22));
+mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived); 
+
+// Find documents where attrArray values are all included in "arrayStringValue" and "false" values
+var query:MongoDocumentQuery = new MongoDocumentQuery();
+query.addQueryCriteria("attrArray", MongoDocument.all(new Array("arrayStringValue", false)));
+mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+
+// Find documents where attrInt32==18 OR attr1==1
+var query:MongoDocumentQuery = new MongoDocumentQuery();
+query.addDocumentCriteria(
+	MongoDocument.or(
+		new MongoDocument("attrInt32", 18),
+		new MongoDocument("attr1", 1)));
+mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+
+// Find docs where (attrInt32 mod 2 != 1) AND (attrInt32 exists)
+var query:MongoDocumentQuery = new MongoDocumentQuery();
+query.addQueryCriteria("attrInt32", MongoDocument.not(MongoDocument.mod(2, 1)).exists(true));
+mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+}}}
+
+Each operator have two methods in the MongoDocument class. One is static and can be used like this :
+{{{
+query.addDocumentCriteria(MongoDocument.or(...));
+}}}
+The other is applied to a MongoDocument instance. You use it like this :
+{{{
+query.addDocumentCriteria(new MongoDocument("first", "criteria").or(...));
+}}}
+In this last case, the first criteria and the or criteria must be true all together (and condition).
+
+== regexp query ==
+Regexp query permits the user to select documents where an attribute match a regexp expression.
+The regexp can be chained with other conditions.
+regexp method have the following signature :
+{{{
+/**
+ * Add a regexp condition. More explanations on options can be found here : http://www.mongodb.org/display/DOCS/Advanced+Queries#AdvancedQueries-RegularExpressions
+ * @param expression (String) : the regexp expression,
+ * @param caseInsensitive (Boolean) : if true the case is insensitive. Default is false,
+ * @param multiline (Boolean) : if true, search is done on a multiline attribute. Default is false,
+ * @param extended (Boolean) : if true use the extended mode. 
+ * @param dotAll (Boolean) : if true all caracters all matched by a dot even new lines.
+ */
+public [static] function regex(expression:String, caseInsensitive:Boolean=false, multiline:Boolean=false,
+	extended:Boolean=false, dotAll:Boolean=false):MongoDocument
+}}}
+
+Example :
+{{{
+// find all doc where attrString like "^string.*[12]$"
+var query:MongoDocumentQuery = new MongoDocumentQuery();
+query.addQueryCriteria("attrString", MongoDocument.regex("^string.*[12]$",true, false, false, false));
+mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+}}}
+MongoDB supports PCRE (Pearl Compatible Regular Expressions). More informations on regexp can be found [http://perldoc.perl.org/perlre.html there].
+
+== Cursors methods ==
+When finding documents with _queryDoc_, depending on how many documents match the query, MongoDB opens a cursor. You can access to the next documents by calling _getMoreDoc_ giving the cursorID given in the _queryDoc_ result.
+
+_getMoreDoc_ signature is the following :
+{{{
+/**
+ * Retrieve more documents on an open cursor. To open Cursor, you can call queryDoc and gets the cursorID in the response.
+ * @param collectionName (String) : the name of the collection to query from,
+ * @param cursorID (Cursor) : the cursor to fetch datas from. Cames from a preceding call to queryDoc,
+ * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+ * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number)
+ */
+public function getMoreDoc(collectionName:String, cursorID:Cursor, callback:Function=null, numberToReturn:int=0):void
+}}}
+
+Here is a complete example :
+{{{
+private var cursorID:Cursor=null;
+
+// retrieve all docs in a collection
+mongoDriver.queryDoc("documentsCollectionName", null, onResponseReceived, null, 0, 10 );
+...
+
+private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+	...
+	cursorID = responseDoc.cursorID;
+	...
+}
+
+...
+// Gets more docs
+if (cursorID.isset()) {
+	// The cursor is set, there is more data to read
+	mongoDriver.getMoreDoc("documentsCollectionName", cursorID, onResponseReceived, 10);
+}
+
+...
+// Killing the cursor when no more necessary (see below)
+mongoDriver.killCursors(new MongoDocumentKillCursors([cursorID]), onLastErrorCallback);
+}}}
+
+Because cursors uses server ressources we must kill them after use. If not the server will do it for you after a while (10 mins).
+To kill a cursor, just call the _killCursor_ method of the driver and give the cursorID.
+The signature is the following :
+{{{
+/**
+ * Kills one or more existing cursors.
+ * @param doc (MongoDocumentKillCursors) : the document containing the cursor(s) to kill,
+ * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode)
+ */
+public function killCursors(doc:MongoDocumentKillCursors, safeCallback:Function = null):void
+}}}
+
+= See also =
+  * [Home],
+  * [Installation],
+  * [DriverInitialization Driver initialization] (connection pooling, safe mode),
+  * [CollectionManipulation Collection manipulation] (create, drop),
+  * [SendingCommand Running commands],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Count],
+  * [Distinct],
+  * [Group],
+  * [MapReduce]
+
+<g:plusone size="medium"></g:plusone> 
