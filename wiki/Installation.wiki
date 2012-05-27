@@ -9,3 +9,5 @@ Installation is very easy. Just download the last driver swc file ([http://code.
 Make your build path points to these swc files, and you are ready to use !
 
 = See also =
+
+  * [Home]
