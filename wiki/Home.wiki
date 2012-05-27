@@ -18,13 +18,13 @@ Main features are :
   # ObjectID helper.
 
 = Quick index =
-  * [Installation],
-  * [WikiSyntax Driver Initialization] (connection pooling, safe mode),
-  * [Collection manipulation] (create, drop),
-  * [Running commands],
-  * [CRUD] (Create, Retrieve, Update, Delete),
-  * [Query] (Find, FindOne, getMore, killCursor),
-  * [Count],
-  * [Distinct],
-  * [Group],
-  * [MapReduce]
+  * [WikiSyntax Installation],
+  * [WikiSyntax Driver initialization] (connection pooling, safe mode),
+  * [WikiSyntax Collection manipulation] (create, drop),
+  * [WikiSyntax Running commands],
+  * [WikiSyntax CRUD] (Create, Retrieve, Update, Delete),
+  * [WikiSyntax Query] (Find, FindOne, getMore, killCursor),
+  * [WikiSyntax Count],
+  * [WikiSyntax Distinct],
+  * [WikiSyntax Group],
+  * [WikiSyntax MapReduce]
