@@ -47,7 +47,7 @@ The parameters are the following :
 
 (1) : parameter *MUST* be provided.
 
-Exemples :
+Examples :
 
 Full initialization :
 {{{
@@ -80,10 +80,10 @@ The driver can be configured to use safe mode (cf. mongoDB documentation for mor
 
 There is 5 safe mode you can use (from less to more secure) :
   # SAFE_MODE_NONE : writes returns immediately without any check. Don't even check for network error,
-  # SAFE_MODE_NORMAL :  don't call getLastError by default but check for network error. This is default value,
-  # SAFE_MODE_SAFE : call getLastError after update, insert or delete, but don't wait for slave. This call is done in the same socket,
+  # SAFE_MODE_NORMAL :  don't call _getLastError_ by default but check for network error. This is default value,
+  # SAFE_MODE_SAFE : call _getLastErro_r after update, insert or delete, but don't wait for slave. This call is done in the same socket,
   # SAFE_MODE_MAJORITY : writes returns when the data are replicated on a majority of servers,
-  # SAFE_MODE_REPLICAS_SAFE : call getLastError and wait for slaves to complete operation
+  # SAFE_MODE_REPLICAS_SAFE : call _getLastError_ and wait for slaves to complete operation
 
 When safe mode is > SAFE_MODE_SAFE, you can provide a callback function that will be called on each update, insert or delete operation. See writes operations for more informations.
 
@@ -97,6 +97,77 @@ _setWriteConcern_ takes some others parameters to complete the safe mode :
   * wTimeout (uint) : the time max to wait for an answer in millisecond. If 0 the wait is infinite. Default value is 10 seconds.
   * fsync (Boolean) : if true, wait for data to be written on disk. Default value is false,
   * journal (Boolean) : if true, wait for the journalization of data. Default value is false.
+
+== Start connection to MongoDB server ==
+To start a connection to MongoDB server simply call _connect()_ on the driver. This instantiate all connections in the pool and try to authenticate them if needed.
+
+You can be aware of the connection process by adding listener to the driver.
+Errors while connecting or authenticating are signaled by throwing an _ExceptionJMCNetMongoDB_ exception. The _message_ give the reason of the error.
+
+Here is a complete example :
+{{{
+...
+mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOK);
+mongoDriver.connect();
+...
+
+protected function onConnectOK(event:EventMongoDB):void {
+	// connected to MongoDB server
+	if (mongoDriver.isConnecte()) {
+	...
+	}
+}
+}}} 
+
+When (and only when) the message JMCNetMongoDBDriver.EVT_CONNECTOK is thrown, you can use drivers methods like query, update, ...
+
+== Stopping connection to server ==
+Stopping connection to server is done by calling _disconnect()_ method on driver.
+All connection with the server are closed, and the socket pool is reinitialized.
+
+You can be aware on complete disconnection by adding a listener to the driver.
+Here is a complete example :
+{{{
+...
+mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CLOSE_CONNECTION, onCloseConnexion);
+mongoDriver.disconnect();
+...
+protected function onCloseConnexion(event:EventMongoDB):void {
+	// Now we are disconnected
+}
+}}}
+
+== Pooling considerations ==
+MongoDB and FLEX are massively asynchronous. This means that when you post a command to the database, the answer will come later in an asynchronous way.
+
+The driver uses socket pooling to interact with the server. So, each command are thrown in a separate socket and each socket waits for an answer if there is one.
+
+So, if you issue 2 commands in sequence, you are not sure that the first is terminated before the second is thrown. This can be particularly a problem when you throw a _getLastError_ command after an insert ou update or delete.
+
+In safe mode, the driver always send the _getLastError_ command in the *same socket* than the command itself. This ensure that those commands are sequential.
+
+If you want to sequentially call the server, you MUST use callback method and send the 2nd command when callback is called.
+
+A socket is released in the pool when the answer is received (for command with answer). So there is no risk of mixing answers of different command.
+
+Example :
+{{{
+...
+mongoDriver.insertDoc("documentsCollectionName", [obj1], null, true);
+// this command is send without waiting for the first one
+mongoDriver.insertDoc("documentsCollectionName", [obj2], onLastErrorCallback, true);
+...
+
+protected function onLastErrorCallback(response:MongoDocumentResponse):void {
+	// Called when obj2 is created 
+	mongoDriver.insertDoc("documentsCollectionName", [obj3], onLastErrorCallback, true);
+}
+
+// obj2 can be created before obj1
+// obj3 cannot be created before obj2
+}}}
+
+
 
 
 = See also =
