@@ -14,6 +14,19 @@ This page will explain, how to initialize the driver. This means :
 = Details =
 
 Initialization of the driver is done by this block of code :
+{{{
+<driver:JMCNetMongoDBDriver id="mongoDriver"
+				hostname="{Constantes.mongoDbHostname}"
+				port="{Constantes.mongoDbHostPort}"
+				databaseName="{Constantes.mongoDbDatabaseName}"
+				socketPoolMin="10"
+				socketPoolMax="20"
+				socketTimeOutMs="10000"
+				username="jmc"
+				password="jmc"
+				logBSON="false"
+				logDocument="false"/>
+}}}
 
 = See also =
   * [Home],
