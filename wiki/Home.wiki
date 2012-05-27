@@ -1,5 +1,7 @@
 #summary Introduction to the JMCNet Full MongoDB Flex Driver.
 
+<wiki:toc max_depth="1" />
+
 = Introduction =
 
 This project aims to provide to the community a full and reliable Flex Driver for [http://www.mongodb.org/ MongoDB]. Some others initiatives exists, but I found it unusable in a professional environment. 
