@@ -1,13 +1,56 @@
-#summary Sending database commands
+#summary Sending database command
+
+<wiki:toc max_depth="2" />
 
 = Introduction =
 
-Add your content here.
-
+This page will explain, how to send commands to the database.
 
 = Details =
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+Sending command is done by the following method of the driver :
+{{{
+public function runCommand(command:MongoDocument, callback:Function=null ):void
+}}}
+
+The parameters are the following :
+  * command (MongoDocument) : the command,
+  * callback (Function) : the callback called with command's results.
+
+If provided, callback must have the following signature :
+{{{
+private function onResponseRunCommandReady (response:MongoDocumentResponse):void
+}}}
+
+== Default callback response for command ==
+A more convenient way to catch command response is to add a listener to the driver. Then all _runCommand_ call without callback provided will call the listener.
+
+Example :
+{{{
+...
+mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_RUN_COMMAND, onRunCommand);
+// this command will call onRunCommand
+mongoDriver.runCommand(new MongoDocument("create",Constantes.documentsCollectionName), null);
+// This command will call onResponseRunCommandReady but not onRunCommand
+mongoDriver.runCommand(new MongoDocument("drop",Constantes.documentsCollectionName), onResponseRunCommandReady );
+...
+
+protected function onRunCommand(event:EventMongoDB):void {
+	// result command is on event.result
+	var response:MongoDocumentResponse = event.result as MongoDocumentResponse;
+	// check response
+}
+
+protected function onResponseRunCommandReady (response:MongoDocumentResponse):void  {
+...
+}
+}}}
+
+
+= See also =
+  * [Home],
+  * [CollectionManipulation Collection manipulation] (create, drop),
+  * [SendingCommand Running commands],
+  * [CRUD] (Create, Retrieve, Update, Delete)
+
+<g:plusone size="medium"></g:plusone> 
