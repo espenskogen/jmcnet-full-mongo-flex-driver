@@ -1,6 +1,6 @@
 #summary Installation of the JMCNet Full MongoDB Flex Driver
 
-<wiki:toc max_depth="1" />
+<wiki:toc max_depth="2" />
 
 = Details =
 
@@ -11,3 +11,5 @@ Make your build path points to these swc files, and you are ready to use !
 = See also =
 
   * [Home]
+
+<g:plusone size="medium"></g:plusone>
