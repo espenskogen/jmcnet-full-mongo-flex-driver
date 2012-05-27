@@ -1,0 +1,24 @@
+#summary Collection manipulation (create or drop or rename).
+
+<wiki:toc max_depth="2" />
+
+= Details =
+
+Manipulating collections is very easy.
+Just call one of these free methods of the drivers :
+{{{
+// Create collection
+public function createCollection(collectionName:String,  safeCallback:Function = null):void
+
+// Drop collection
+public function dropCollection(collectionName:String,  safeCallback:Function = null):void
+
+// Rename collection
+public function renameCollection(collectionName:String, newCollectionName:String, safeCallback:Function = null):void
+}}}
+
+= See also =
+
+  * [Home]
+
+<g:plusone size="medium"></g:plusone>
