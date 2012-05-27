@@ -19,7 +19,7 @@ Main features are :
 
 = Quick index =
   * [Installation],
-  * [Driver initialization] (connection pooling, safe mode),
+  * [DriverInitialization] (connection pooling, safe mode),
   * [Collection manipulation] (create, drop),
   * [Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
