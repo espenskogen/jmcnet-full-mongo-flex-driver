@@ -21,7 +21,7 @@ Main features are :
   * [Installation],
   * [DriverInitialization Driver initialization] (connection pooling, safe mode),
   * [CollectionManipulation Collection manipulation] (create, drop),
-  * [RunningCommand Running commands],
+  * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor),
   * [Count],
