@@ -2,7 +2,7 @@
 
 = Introduction =
 
-This project aims to provide to the community a full and reliable Flex Driver for [http://www.mongodb.org/ MongoDB]. Some others initiatives exists, but I found it unusable in a professionnal environment. 
+This project aims to provide to the community a full and reliable Flex Driver for [http://www.mongodb.org/ MongoDB]. Some others initiatives exists, but I found it unusable in a professional environment. 
 
 
 = Details =
@@ -17,5 +17,12 @@ Main features are :
 
 = Quick index =
   * Installation,
-  * Driver initialisation,
-  * 
+  * Driver initialization,
+  * Collection manipulation (create, drop),
+  * Running commands,
+  * CRUD (Create, Retrieve, Update, Delete),
+  * Querying (Find, FindOne, getMore, killCursor),
+  * Count,
+  * Distinct,
+  * Group,
+  * MapReduce,
