@@ -28,6 +28,7 @@ Main features are :
   * [Count],
   * [Distinct],
   * [Group],
-  * [MapReduce]
+  * [MapReduce],
+  * [DirectObject Direct object manipulation]
 
 <g:plusone size="medium"></g:plusone> 
