@@ -1,5 +1,5 @@
 #summary How to to use the MapReduce fonctionnality
-#labels Phase-Implementation
+#labels Phase-Implementation,Featured
 
 <wiki:toc max_depth="2" />
 
