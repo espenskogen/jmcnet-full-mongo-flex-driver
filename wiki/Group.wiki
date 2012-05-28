@@ -57,11 +57,6 @@ Please refers to MongoDB documentation to have more explanations and example of 
 
 = See also =
   * [Home],
-  * [Installation],
-  * [DriverInitialization Driver initialization] (connection pooling, safe mode),
-  * [CollectionManipulation Collection manipulation] (create, drop),
-  * [SendingCommand Running commands],
-  * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor),
   * [Count],
   * [Distinct],
