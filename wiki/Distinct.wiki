@@ -1,0 +1,49 @@
+#summary Execute a query and retrieve distinct values
+#labels Phase-Implementation
+
+<wiki:toc max_depth="2" />
+
+= Introduction =
+
+This page will explain, how to use the _distinct_ driver's command.
+
+= Details =
+In order to retrieve some distinct values on a query you must use the _distinct_ method of the driver. The method signature is the following :
+{{{
+/**
+ * Retrieve distinct documents compliant to a query.
+ * @param collectionName (String) : the name of the collection to query from,
+ * @param key (String) : the key used to distinct documents,
+ * @param query (MongoDocument) : the conditions document,
+ * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+ */
+public function distinct(collectionName:String, key:String, query:MongoDocument=null, callback:Function = null):void
+}}}
+
+The result of the distinct command is a _MongoDocumentResponse_ and is passed to the callback if provided.
+
+Example :
+{{{
+// Retrieve distinct attrString key value in a collection
+mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", new MongoDocument(), onResponseReceived); 
+
+...
+private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+	if (responseDoc.numberReturned == 1) {
+		// tabVal is the distinct values
+		var tabVal:Array = responseDoc.getDocument(0).getValue("values");
+	}
+}
+
+}}}
+
+= See also =
+  * [Home],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Count],
+  * [Distinct],
+  * [Group],
+  * [MapReduce]
+
+<g:plusone size="medium"></g:plusone> 
