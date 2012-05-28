@@ -1,0 +1,86 @@
+#summary ObjectID - Object identifier
+#labels Phase-Design,Phase-Implementation
+
+<wiki:toc max_depth="2" />
+
+= Introduction =
+
+This page will explain, how to use the object identifier (ObjectID class).
+Thank's to _ericsoco_ which provide an ObjectID class [http://words.transmote.com/wp/20120402/mongodb-objectid-for-as3/ here].
+
+= Details =
+In MongoDB each document have a unique id. This is field named `_id` which is mandatory. If not provided by the client, MongoDB will add a `_id` value calculated in a way to be unique.
+`_id` are stored as 12-byte ByteArray.
+
+The ObjectID class provide helpers method to manipulate `_id` fields :
+{{{
+public class ObjectID {
+	/**
+	 * @brief Create a new ObjectID
+	 * @param bytearray A little-endian, 12-byte ByteArray containing the ID
+	 */
+	public function ObjectID( bytearray : ByteArray = null ) :void;
+	
+	/**
+	 * @brief creates a new ObjectID from a String.
+	 * @param String the _id value
+	 */
+	public static function createFromString(value:String):ObjectID;
+		
+	/**
+	 * @brief Set the value of this ObjectID
+	 * @param bytearray A little-endian, 12-byte ByteArray containing the ID
+	 */
+	public function setFromBytes( bytearray : ByteArray ) :void;
+		
+	/**
+	 * @brief Get the value of this ObjectID
+	 * @return A little-endian, 12-byte ByteArray containing the ID
+	 */
+	public function getAsBytes() : ByteArray;
+
+	/**
+	 * @bried Returns a formatted readable string
+	 */
+	public function toString() : String;
+}
+
+}}}
+
+You use it the following ways :
+{{{
+// Create and initialize a new ObjectID. The _id value is unpredictable
+var id:ObjectID = new ObjectID();
+
+// Create and initialize a new ObjectID. The _id value is "myValue"
+var id:ObjectID = ObjectID.createfromString("myValue");
+}}}
+
+== ObjectIDable abstract class ==
+This class is provided to help developper to use ObjectID in there VO or DTO.
+Simply extends ObjectIDable in your VO or DTO and then you have access to an _id fields of type ObjectID, which can be set in constructor.
+
+Example :
+{{{
+// An ObjectIDable class
+public class TestComplexObjectIDVO extends ObjectIDable	{
+	public function TestComplexObjectIDVO(_id:ObjectID=null){
+		super(_id);
+	}
+...
+}
+
+// Instanciate
+obj = new TestComplexObjectIDVO(ObjectID.createFromString("myObject"));
+
+// Use
+obj._id ;
+}}}
+
+= See also =
+  * [Home],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor)
+  * [DirectObjectManipulation Direct object manipulation]
+
+<g:plusone size="medium"></g:plusone> 
