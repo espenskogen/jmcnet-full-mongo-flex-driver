@@ -1,0 +1,157 @@
+#summary Direct object manipulation
+#labels Featured,Phase-Design,Phase-Implementation
+
+<wiki:toc max_depth="2" />
+
+= Introduction =
+
+This page will explain, how to manipulate direct native Flex objects without needing to transform them into MongoDocument. This feature permits you to :
+  # save object directly without conversion,
+  # restore those object directly.
+Those features are avalaible thanks to Flex introspection. 
+
+= Details =
+We have seen in previous documentation (see [CRUD]), that _insertDoc_, _queryDoc_ deals with generic MongoDocument.
+It is also possible to call them with native Flex object, like VO (Value Object) or DTO (Data Transfert Object) for example.
+In this case, all attributes will be saved regarding of it's type.
+All native Flex type a supported String, Date, Array, int, Number, ...
+
+It's also possible to manipulate complex objects composed of any combination of the type described.
+
+Complete example :
+{{{
+// Two complex class to manipulate :
+public class TestVO {
+	public var attrString:String;
+	public var attrInt32:uint;
+	public var attrNumber:Number;
+	public var attrBoolean:Boolean;
+	public var attrArray:Array;
+}
+
+public class TestComplexObjectIDVO extends ObjectIDable {
+	public var attrInt32:uint;
+	public var testvo:TestVO;
+	public var arrayTestvo:Array;
+	// Notice how to declare a strongly typed Array
+	[ArrayElementType("TestVO")]
+	public var typedArrayTestvo:Array;		
+}
+
+...
+
+// To store the object
+var testvo:TestVO = new TestVO("One String", 19, 123.456, false);
+var testvo1:TestVO = new TestVO("2nd String", 20, 124.456, true);
+var testvo2:TestVO = new TestVO("3rd String", 21, 125.456, false);
+var testvo3:TestVO = new TestVO("4rd String", 22, 126.456, true);
+var obj:TestComplexObjectIDVO = new TestComplexObjectIDVO(ObjectID.createFromString("myObject"), 16, testvo, new Array(testvo1, testvo2), new Array(testvo3));
+
+driver.insertDoc("testu", [obj]);
+
+...
+> db.testu.find()
+{
+  "_id" : ObjectId("00086d794f626a6563740000"),
+  "arrayTestvo" :
+  [
+       {
+         "attrArray" : ["arrayStringValue", 14, 345.678, false ],
+         "attrBoolean" : true,
+         "attrInt32" : 20,
+         "attrNumber" : 124.456,
+         "attrString" : "2nd String"
+      },
+      {
+         "attrArray" : [ "arrayStringValue", 14, 345.678, false ],
+         "attrBoolean" : false,
+         "attrInt32" : 21,
+         "attrNumber" : 125.456,
+         "attrString" : "3rd String" }
+  ],
+  "attrInt32" : 16,
+  "testvo" :
+  {
+     "attrArray" : [ "arrayStringValue", 14, 345.678, false ], 
+     "attrBoolean" : false,
+     "attrInt32" : 19,
+     "attrNumber" : 123.456,
+     "attrString" : "One String"
+  },
+  "typedArrayTestvo" :
+  [
+     {
+        "attrArray" : [ "arrayStringValue", 14, 345.678, false ],
+        "attrBoolean" : true,
+        "attrInt32" : 22,
+        "attrNumber" : 126.456,
+        "attrString" : "4rd String"
+     }
+  ]
+}
+
+...
+
+// gets the object back
+driver.addEventListener(JMCNetMongoDBDriver.EVT_RESPONSE_RECEIVED, onResponseReceived);
+driver.queryDoc("testu", new MongoDocumentQuery());
+
+...
+
+public function onResponseReceived(event:EventMongoDB):void {
+	// clean up -> delete object
+	driver.dropCollection("testu");
+	var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
+	Assert.assertEquals(1, rep.documents.length);
+
+	// Retrieve a TestComplexObjectIDVO document
+	var vo:TestComplexObjectIDVO = rep.documents[0].toObject(TestComplexObjectIDVO);
+
+	Assert.assertEquals("086d794f626a65637400", vo._id.toString());
+	Assert.assertEquals(16, vo.attrInt32);
+			
+	Assert.assertNotNull(vo.testvo);
+	Assert.assertTrue(vo.testvo is TestVO);
+	Assert.assertEquals(19, vo.testvo.attrInt32);
+	Assert.assertEquals("One String", vo.testvo.attrString);
+	Assert.assertEquals(123.456, vo.testvo.attrNumber);
+	Assert.assertFalse(vo.testvo.attrBoolean);
+			
+	Assert.assertEquals(2, vo.arrayTestvo.length);
+	// here we have send TestVO but we only get an Object in return because Array are not typed
+	Assert.assertTrue(vo.arrayTestvo[0] is Object);
+	Assert.assertEquals(20, vo.arrayTestvo[0].attrInt32);
+	Assert.assertEquals("2nd String", vo.arrayTestvo[0].attrString);
+	Assert.assertEquals(124.456, vo.arrayTestvo[0].attrNumber);
+	Assert.assertTrue(vo.arrayTestvo[0].attrBoolean);
+			
+	Assert.assertTrue(vo.arrayTestvo[1] is Object);
+	Assert.assertEquals(21, vo.arrayTestvo[1].attrInt32);
+	Assert.assertEquals("3rd String", vo.arrayTestvo[1].attrString);
+	Assert.assertEquals(125.456, vo.arrayTestvo[1].attrNumber);
+	Assert.assertFalse(vo.arrayTestvo[1].attrBoolean);
+			
+	Assert.assertEquals(1, vo.typeArrayTestvo.length);
+	// here we have a send TestVO and we get a real TestVO in return !!
+	Assert.assertTrue(vo.typeArrayTestvo[0] is TestVO);
+	Assert.assertEquals(22, vo.typeArrayTestvo[0].attrInt32);
+	Assert.assertEquals("4rd String", vo.typeArrayTestvo[0].attrString);
+	Assert.assertEquals(126.456, vo.typeArrayTestvo[0].attrNumber);
+	Assert.assertTrue(vo.typeArrayTestvo[0].attrBoolean);
+}
+
+}}}
+
+In the example we can notice that :
+  # Conversion to object is done by `rep.documents[0].toObject(TestComplexObjectIDVO)`. You get a `TestComplexObjectIDVO` in return,
+  # not typed Array (like _arrayTestvo_ in example) are converted into generic Object in return because the driver can't know the real object type,
+  # strongly typed Array - declared with `[ArrayElementType("TestVO")]` - are converted into strongly typed Array (no lost of type during restore).
+  # `_id` value can be provided before _insertDoc_. This is done by using the _ObjectID_ class Cf. [ObjectID].
+
+= See also =
+  * [Home],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor),
+  * [ObjectID object identifier]
+
+<g:plusone size="medium"></g:plusone> 
