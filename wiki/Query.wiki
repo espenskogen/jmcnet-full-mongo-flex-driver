@@ -141,7 +141,7 @@ public function killCursors(doc:MongoDocumentKillCursors, safeCallback:Function 
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
-  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Query] (Find, !FindOne, getMore, killCursor),
   * [Count],
   * [Distinct],
   * [Group],
