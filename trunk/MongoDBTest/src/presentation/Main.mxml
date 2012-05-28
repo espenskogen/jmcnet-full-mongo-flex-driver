@@ -54,11 +54,10 @@
 				JMCNetLogger.setLogLevel(JMCNetLogger.DEBUG);
 
 				// Add generic mongoDB listener
-				mongoDriver.addEventListener("connectOK", onConnectOK);
-				mongoDriver.addEventListener("connectKO", onConnectKO);
-				mongoDriver.addEventListener("closeConnection", onCloseConnexion);
-				mongoDriver.addEventListener("lastError", onLastError);
-				mongoDriver.addEventListener("runCommand", onRunCommand);
+				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOK);
+				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CLOSE_CONNECTION, onCloseConnexion);
+				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_LAST_ERROR, onLastError);
+				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_RUN_COMMAND, onRunCommand);
 				
 				// Set safeMode
 				mongoDriver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_SAFE);
@@ -148,6 +147,7 @@
 				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new Array("1ere chaine", "2eme chaine")], onLastErrorCallback, true);
 				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO()], onLastErrorCallback, true);
 				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO(ObjectID.createFromString("myObjectIDString"))], onLastErrorCallback, true);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new MongoDocument("key", "value")]);
 			}
 			
 			protected function creerCollectionClickHandler(event:MouseEvent):void
@@ -236,8 +236,13 @@
 				console.text += "\n------------------------------------------------------\nDelete collection '"+Constantes.documentsCollectionName+"' (root.attrString = newValue) ...";
 				
 				var doc:MongoDocumentDelete = new MongoDocumentDelete();
-				doc.addSelectorCriteria("root.attrString", "newValue");
+				doc.addSelectorCriteria("attrString", "newValue");
 				mongoDriver.deleteDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false);
+				
+				// 2nd way to initialize MongoDocumentDelete
+				mongoDriver.deleteDoc(Constantes.documentsCollectionName,
+					new MongoDocumentDelete(MongoDocument.or(new MongoDocument("attrString", "newValue"), new MongoDocument("attrString", "otherValue"))),
+					onLastErrorCallback, true);
 			}
 			
 			protected function killCursor_clickHandler(event:MouseEvent):void
@@ -305,7 +310,7 @@
 			protected function aggregation_distinct_clickHandler(event:MouseEvent):void	{
 				log.debug("In aggregation_distinct_clickHandler");
 				console.text += "\n------------------------------------------------------\nAggregation distinct collection '"+Constantes.documentsCollectionName+"' ( attrString) ...";
-				mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", new MongoDocument(), onResponseReceived); 
+				mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", null, onResponseReceived); 
 			}
 			
 			protected function aggregation_group_clickHandler(event:MouseEvent):void {
@@ -314,7 +319,7 @@
 				mongoDriver.group(
 					Constantes.documentsCollectionName,
 					/* new MongoDocument("attrString", 1) */ null,
-					new JavaScriptCode("function(obj, prev) { prev.count += obj.attrInt32; prev.nb++; }"),
+					new JavaScriptCode("function(obj, result) { result.count += obj.attrInt32; result.nb++; }"),
 					new MongoDocument("count", 0).addKeyValuePair("nb",0).addKeyValuePair("avg", 0),
 					onResponseReceived,
 					new JavaScriptCode("function(doc) { return { \"attrString\" : doc.attrString }; }"),
