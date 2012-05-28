@@ -81,6 +81,6 @@ obj._id ;
   * [Home],
   * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor)
-  * [DirectObjectManipulation Direct object manipulation]
+  * [DirectObject Direct object manipulation]
 
 <g:plusone size="medium"></g:plusone> 
