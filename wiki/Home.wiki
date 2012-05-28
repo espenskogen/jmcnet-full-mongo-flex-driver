@@ -29,3 +29,5 @@ Main features are :
   * [Distinct],
   * [Group],
   * [MapReduce]
+
+<g:plusone size="medium"></g:plusone> 
