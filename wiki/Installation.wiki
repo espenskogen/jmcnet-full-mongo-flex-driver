@@ -1,4 +1,5 @@
 #summary Installation of the JMCNet Full MongoDB Flex Driver
+#labels Phase-Deploy,Featured
 
 <wiki:toc max_depth="2" />
 
