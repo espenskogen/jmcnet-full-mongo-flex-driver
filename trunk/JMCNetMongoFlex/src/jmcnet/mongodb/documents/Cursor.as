@@ -34,5 +34,7 @@ package jmcnet.mongodb.documents
 		public function toString():String {
 			return "0x"+highValue.toString(16)+"-0x"+lowValue.toString(16);
 		}
+		
+		public function isset():Boolean { return _n != 0; }
 	}
 }

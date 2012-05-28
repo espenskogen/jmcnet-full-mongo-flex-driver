@@ -60,7 +60,7 @@ package jmcnet.mongodb.messages
 			msg.writeUnsignedInt(_numberToSkip);
 			msg.writeInt(_numberToReturn);
 			
-			// If there is no query, assume we all docs
+			// If there is no query, assume we want all docs
 			if (_query == null) {
 				_query = new MongoDocumentQuery();
 			}
