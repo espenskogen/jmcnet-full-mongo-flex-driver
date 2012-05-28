@@ -29,6 +29,7 @@ Main features are :
   * [Distinct],
   * [Group],
   * [MapReduce],
-  * [DirectObject Direct object manipulation]
+  * [DirectObject Direct object manipulation],
+  * [ObjectID Object Identifier]
 
 <g:plusone size="medium"></g:plusone> 
