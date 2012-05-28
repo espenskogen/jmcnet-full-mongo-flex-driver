@@ -240,6 +240,15 @@ package jmcnet.mongodb.documents
 		public static function and(... docs:Array):MongoDocument { return new MongoDocument().addKeyValuePair("$and", docs); }
 		public static function size(size:uint):MongoDocument { return new MongoDocument().size(size); }
 		public static function type(type:uint):MongoDocument { return new MongoDocument().type(type);}
+		
+		/**
+		 * Add a regexp condition. More explanations on options can be found here : http://www.mongodb.org/display/DOCS/Advanced+Queries#AdvancedQueries-RegularExpressions
+		 * @param expression (String) : the regexp expression,
+		 * @param caseInsensitive (Boolean) : if true the case is insensitive. Default is false,
+		 * @param multiline (Boolean) : if true, search is done on a multiline attribute. Default is false,
+		 * @param extended (Boolean) : if true use the extended mode. 
+		 * @param dotAll (Boolean) : if true all caracters all matched by a dot even new lines.
+		 */
 		public static function regex(expression:String, caseInsensitive:Boolean=false, multiline:Boolean=false, extended:Boolean=false, dotAll:Boolean=false):MongoDocument {
 			return new MongoDocument().regex(expression, caseInsensitive, multiline, extended, dotAll);}
 		public static function elemMatch(value:Object):MongoDocument { return new MongoDocument().elemMatch(value); }

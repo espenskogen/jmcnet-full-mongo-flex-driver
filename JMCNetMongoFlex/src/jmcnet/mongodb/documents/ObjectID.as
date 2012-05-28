@@ -69,6 +69,9 @@ package jmcnet.mongodb.documents
 			return rep;
 		}
 		
+		/**
+		 * @bried Returns a formatted readable string
+		 */
 		public function toString() : String {
 			var str:String = "";
 			for ( var i : int = 0; i < 12; ++i ) {

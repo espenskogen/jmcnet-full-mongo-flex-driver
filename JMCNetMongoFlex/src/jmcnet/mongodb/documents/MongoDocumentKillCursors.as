@@ -15,8 +15,13 @@ package jmcnet.mongodb.documents
 		
 		private var _lstCursorsID:Array = new Array();
 		
-		public function MongoDocumentKillCursors() {
+		public function MongoDocumentKillCursors(cursors:Array=null) {
 			super();
+			if (cursors != null) {
+				for each (var cursor:Cursor in cursors) {
+					addCursorID(cursor);
+				}
+			}
 		}
 		
 		public function addCursorID(cursorID:Cursor):void {

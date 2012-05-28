@@ -31,6 +31,20 @@ package jmcnet.mongodb.driver
 	
 	import mx.utils.ObjectUtil;
 	
+	
+	/**
+	 * The Driver class. A driver instance is dedicated to one database.
+	 * @param hostname (String) : the MongoDB server's hostname,
+	 * @param port (uint) : the MongoDB server's port. Default value is 27017,
+	 * @param databaseName (String) : the database's name this driver is dedicated to,
+	 * @param socketPoolMin (uint) : the min number of connection in the pool. Default value is 10,
+	 * @param socketPoolMax (uint) : the max number of connection in the pool. Default value is 50,
+	 * @param socketTimeOutMs (uint) : the socket timeout in milliseconds. Default value is 10 seconds,
+	 * @param username (String) : username used for authentication. If null, driver is in non authenticate mode. Default value is null,
+	 * @param password (String) : password of the user for authentication. Default value is null,
+	 * @param logBSON (Boolean) : if true trace BSON encoding/decoding. Default value is false,
+	 * @param logDocument (Boolean) : if true trace all Document manipulation. Default value is false.
+	 */
 	[Event(name=EVT_CONNECTOK, type="newjmcnetds.EventMongoDB")]
 	[Event(name=EVT_CLOSE_CONNECTION, type="newjmcnetds.EventMongoDB")]
 	[Event(name=EVT_LAST_ERROR, type="newjmcnetds.EventMongoDB")]
@@ -273,7 +287,11 @@ package jmcnet.mongodb.driver
 		}
 		
 		/**
-		 * Insert one or more document in a collection
+		 * Insert one or more documents in a collection
+		 * @param collectionName (String) : the name of the collection to insert into,
+		 * @param documents (Array of Object or MongoDocument) : the objects to insert,
+		 * @param safeCallback (Function) : the callback called when documents are inserted (cf. safe mode). Default value is null,
+		 * @param continueOnError (Boolean) : true if must continue when there is an error. Default value is false.
 		 */
 		public function insertDoc(collectionName:String, documents:Array, safeCallback:Function=null, continueOnError:Boolean=true):void {
 			log.info("Calling JMCNetMongoDBDriver::insert collectionName="+collectionName+" safeCallback="+safeCallback+" continueOnError="+continueOnError+" documents="+ObjectUtil.toString(documents)); 
@@ -296,9 +314,23 @@ package jmcnet.mongodb.driver
 		}
 		
 		/**
-		 * Query documents
-		 */
-		public function queryDoc(collectionName:String, query:MongoDocumentQuery, callback:Function=null, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
+		 * Query documents (ie. find, findOne, find.skip, find.limit).
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param query (MongoDocumentQuery) : the query document,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param returnFields (MongoDocument) : list of field included in the response. Default is null (all fields are returned),
+		 * @param numberToSkip (uint) : number of docs to skip. Usefull for pagination. Default is 0,
+		 * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number),
+		 * @param taillableCursor (Boolean) : if true opens and returns a taillable cursor,
+		 * @param slaveOk (Boolean) : if true query can be send to an arbitrary slave,
+		 * @param noCursorTimeout (Boolean) : if true the cursor is never kill even if not use for a while,
+		 * @param awaitData (Boolean) : Use with TailableCursor. If we are at the end of the data, block for a while rather than returning no data. After a timeout period, we do return as normal.
+		 * @param exhaust (Boolean) : Stream the data down full blast in multiple "more" packages, on the assumption that the client will fully read all data queried. Faster when you are pulling a lot of data and know you want to pull it all down. Note: the client is not allowed to not read all the data unless it closes the connection.
+		 * @param partial (Boolean) : Get partial results from a mongos if some shards are down (instead of throwing an error) 
+		 * */
+		public function queryDoc(collectionName:String, query:MongoDocumentQuery, callback:Function=null, returnFields:MongoDocument=null,
+								 numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false,
+								 awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
 			log.info("Calling JMCNetMongoDBDriver::query collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 
 			var socket:TimedSocket=getConnectedSocket();
@@ -311,6 +343,13 @@ package jmcnet.mongodb.driver
 			new MongoResponseReader(socket, callback, _pool);
 		}
 		
+		/**
+		 * Retrieve more documents on an open cursor. To open Cursor, you can call queryDoc and gets the cursorID in the response.
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param cursorID (Cursor) : the cursor to fetch datas from. Cames from a preceding call to queryDoc,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number)
+		 */
 		public function getMoreDoc(collectionName:String, cursorID:Cursor, callback:Function=null, numberToReturn:int=0):void {
 			log.info("Calling JMCNetMongoDBDriver::getMore collectionName="+collectionName+" cursorID="+cursorID+" numberToReturn="+numberToReturn);
 			
@@ -355,6 +394,11 @@ package jmcnet.mongodb.driver
 			this.dispatchEvent(new EventMongoDB("responseReceived", response));
 		}
 		
+		/**
+		 * Send a command to the database.
+		 * @param command (MongoDocument) : the command,
+		 * @param callback (Function) : the callback called with command's results.
+		 */
 		public function runCommand(command:MongoDocument, callback:Function=null ):void {
 			log.info("Calling JMCNetMongoDBDriver::runCommand command="+command.toString()+" callback="+callback);
 			var socket:TimedSocket = getConnectedSocket();
@@ -382,8 +426,16 @@ package jmcnet.mongodb.driver
 			this.dispatchEvent(new EventMongoDB("lastError", response));
 		}
 		
+		/**
+		 * Update one or more documents of a collection.
+		 * @param collectionName (String) : the name of the collection,
+		 * @param update (MongoDocumentUpdate) : the update query and modifications,
+		 * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode),
+		 * @param upsert (Boolean) : if true can perform an insert if doc don't exists. Default value is false,
+		 * @param multiupdate (Boolean) : if true can perform update one more than one document. Default value is false,
+		 */
 		public function updateDoc(collectionName:String, update:MongoDocumentUpdate, safeCallback:Function = null, upsert:Boolean=false, multiUpdate:Boolean=false):void {
-			log.info("Calling JMCNetMongoDBDriver::update collectionName="+collectionName+" safeCallback="+safeCallback+" update="+ObjectUtil.toString(update)+" upsert="+upsert+" multiUpdate="+multiUpdate);
+			log.info("Calling JMCNetMongoDBDriver::update collectionName="+collectionName+" safeCallback="+safeCallback+" update="+update+" upsert="+upsert+" multiUpdate="+multiUpdate);
 			var socket:TimedSocket = getConnectedSocket();
 			
 			var msg:MongoMsgUpdate = new MongoMsgUpdate(databaseName, collectionName, update, upsert, multiUpdate);
@@ -400,8 +452,15 @@ package jmcnet.mongodb.driver
 			checkSafeModeAndReleaseSocket(safeCallback, socket);
 		}
 		
+		/**
+		 * Delete one or more documents of a collection.
+		 * @param collectionName (String) : the name of the collection,
+		 * @param delete (MongoDocumentDelete) : the delete query,
+		 * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode),
+		 * @param singleRemove (Boolean) : if true perform a single remove. Default value is false.
+		 */
 		public function deleteDoc(collectionName:String, doc:MongoDocumentDelete, safeCallback:Function = null, singleRemove:Boolean=false):void {
-			log.info("Calling JMCNetMongoDBDriver::deleteDoc collectionName="+collectionName+" safeCallback="+safeCallback+" deleteDoc="+ObjectUtil.toString(doc)+" singleRemove="+singleRemove);
+			log.info("Calling JMCNetMongoDBDriver::deleteDoc collectionName="+collectionName+" safeCallback="+safeCallback+" deleteDoc="+doc+" singleRemove="+singleRemove);
 			var socket:TimedSocket = getConnectedSocket();
 			
 			var msg:MongoMsgDelete = new MongoMsgDelete(databaseName, collectionName, doc, singleRemove);
@@ -418,6 +477,11 @@ package jmcnet.mongodb.driver
 			checkSafeModeAndReleaseSocket(safeCallback, socket);
 		}
 		
+		/**
+		 * Kills an existing cursor on a collection.
+		 * @param doc (MongoDocumentKillCursors) : the document containing the cursor(s) to kill,
+		 * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode)
+		 */
 		public function killCursors(doc:MongoDocumentKillCursors, safeCallback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::killCursor safeCallback="+safeCallback+" doc="+ObjectUtil.toString(doc));
 			var socket:TimedSocket = getConnectedSocket();
@@ -446,6 +510,20 @@ package jmcnet.mongodb.driver
 			runCommand(new MongoDocument("drop",collectionName), safeCallback);
 		}
 		
+		public function renameCollection(collectionName:String, newCollectionName:String, safeCallback:Function = null):void {
+			log.info("Calling JMCNetMongoDBDriver::renameCollection collectionName="+collectionName+" newCollectionName="+newCollectionName+" safeCallback="+safeCallback);
+			runCommand(new MongoDocument("rename",collectionName), safeCallback);
+		}
+		
+		/**
+		 * Count how many documents are compliant to a query.
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param query (MongoDocument) : the conditions document,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param skip (uint) : number of docs to skip. Usefull for pagination. Default is 0,
+		 * @param limit (uint) : number of docs max to return. Usefull for pagination. Default is 0 (returns default documents number),
+		 * @param snapshot (Boolean) : if true makes a snapshot before counting.
+		 */
 		public function count(collectionName:String, query:MongoDocument=null, callback:Function = null, skip:uint=0, limit:uint=0, snapshot:Boolean=false):void {
 			log.info("Calling JMCNetMongoDBDriver::count collectionName="+collectionName+" callback="+callback+" skip="+skip+" limit="+limit+" snapshot="+snapshot);
 			var cmd:MongoDocument = new MongoDocument("count",collectionName);
@@ -457,6 +535,13 @@ package jmcnet.mongodb.driver
 			runCommand(cmd, callback);
 		}
 		
+		/**
+		 * Retrieve distinct documents compliant to a query.
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param key (String) : the key used to distinct documents,
+		 * @param query (MongoDocument) : the conditions document,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 */
 		public function distinct(collectionName:String, key:String, query:MongoDocument=null, callback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::distinct collectionName="+collectionName+" key="+key+" callback="+callback);
 			var cmd:MongoDocument = new MongoDocument("distinct",collectionName);
@@ -466,6 +551,17 @@ package jmcnet.mongodb.driver
 			runCommand(cmd, callback);
 		}
 		
+		/**
+		 * Retrieve documents and group them among a key.
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param key (String) : the key used to group documents (see keyf param above),
+		 * @param reduce (JavaScriptCode) : a reduce JS function executed on the group. JS signature must be "function(obj, result):void",
+		 * @param initial (MongoDocument) : a list of key/value pairs used to initialize variables,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param keyf (JavaScriptCode) : a JS function used to calculate a key for grouping. keyf signature must be : "function(doc):{keyName: valueOfKeyForDoc}". Cf. One of key/keyf param must be provided. Default value is null,
+		 * @param cond (MongoDocument) : a document used to filter documents that will be grouped. Default value is null (all documents are considered),
+		 * @param finalize (JavaScriptCode) : a JS function used to finalize the result. JS signature must be "function(result):void". Default value is null (no finalization).
+		 */
 		public function group(collectionName:String, key:MongoDocument, reduce:JavaScriptCode, initial:MongoDocument, callback:Function, keyf:JavaScriptCode=null, cond:MongoDocument=null, finalize:JavaScriptCode=null):void {
 			log.info("Calling JMCNetMongoDBDriver::group collectionName="+collectionName+" key="+key+" reduce="+reduce+" initial="+initial+" callback="+callback+" keyf="+keyf+" cond="+cond+" finalize="+finalize);
 			var grpCmd:MongoDocument= new MongoDocument();
@@ -481,6 +577,21 @@ package jmcnet.mongodb.driver
 			runCommand(cmd, callback);
 		}
 		
+		/**
+		 * Map and reduce documents. Example of scope ('init=0' and a JS function called 'myScopedFct=new Date()') : new MongoDocument("init", 0).addKeyValuePair("myScopedFct", new JavaScriptCodeScoped("new Date()"))
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param map (JavaScriptCode) : the map JS function. JS signature must be "function():void". You must call 'emit(key, value)' in the JS function,
+		 * @param reduce (JavaScriptCode) : the reduce JS function executed on the documents grouped by key. JS signature must be "function (key, emits):{key, value}",
+		 * @param out (MongoDocument) : specificy how to output the result. Values can be. See http://www.mongodb.org/display/DOCS/MapReduce#MapReduce-Outputoptions,
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param query (MongoDocument) : a document used to filter documents that will be map/reduced. Default value is null (all documents are considered),
+		 * @param sort (MongoDocument) : a document specifiying the sort order. Default value is null (no sort),
+		 * @param limit (uint) : limit the number of documents considered. Usefull only with sort. Default is 0 (no limit),
+		 * @param finalize (JavaScriptCode) : a JS function used to finalize the result. JS signature must be "function(key, result):result". Default value is null (no finalization).
+		 * @param scope (MongoDocument) : a document specifiying the scoped variables. Scoped variables are global variables usable in all JS. If the value of a variable is a JS code, you must use JavaScriptCodeScoped to specify the code. Default value is null (no scope variables),
+		 * @param jsMode (Boolean) : if true, all JS is executed in one JS instance. Default value is false,
+		 * @param verbose (Boolean) : if true output all 'print' JS command to the server logs. Default is false.
+		 */
 		public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, callback:Function,
 								  query:MongoDocument=null, sort:MongoDocument=null, limit:uint=0, finalize:JavaScriptCode=null,
 								  scope:MongoDocument=null, jsMode:Boolean=false, verbose:Boolean=false):void {
