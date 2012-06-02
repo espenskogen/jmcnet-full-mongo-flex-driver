@@ -154,7 +154,14 @@
 			{
 				trace("Dans creerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nCréation de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.runCommand(new MongoDocument("create",Constantes.documentsCollectionName), checkLastErrorCallback);
+				mongoDriver.createCollection(Constantes.documentsCollectionName, checkLastErrorCallback);
+			}
+			
+			protected function renameCollectionClickHandler(event:MouseEvent):void
+			{
+				trace("Dans renameCollectionClickHandler");
+				console.text += "\n------------------------------------------------------\nRename of collection '"+Constantes.documentsCollectionName+"' to newCollectionName (only works with the admin db) ...";
+				mongoDriver.renameCollection(Constantes.documentsCollectionName, "newCollectionName", checkLastErrorCallback);
 			}
 			
 			protected function checkLastErrorCallback(responseDoc:MongoDocumentResponse):void {
@@ -175,7 +182,7 @@
 			{
 				log.evt("Dans supprimerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nSuppression de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.runCommand(new MongoDocument("drop",Constantes.documentsCollectionName), checkLastErrorCallback);
+				mongoDriver.dropCollection(Constantes.documentsCollectionName, checkLastErrorCallback);
 			}
 			
 			protected function lister_clickHandler(event:MouseEvent):void
@@ -221,12 +228,12 @@
 				doc.addUpdateCriteria("$set", new MongoDocument("root.attrString", "newValue"));
 				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false, true);
 				
-				log.debug("In update_clickHandler (root.attrInt32=256 where root.attrInt32=18, mulyiUpdate=false)");
-				console.text += "\n------------------------------------------------------\nUpdate collection '"+Constantes.documentsCollectionName+"' (root.attrInt32=256 where root.attrInt32=18, multiUpdate=false) ...";
+				log.debug("In update_clickHandler (root.attrInt32=256 where attrInt32=18, multiUpdate=false)");
+				console.text += "\n------------------------------------------------------\nUpdate collection '"+Constantes.documentsCollectionName+"' (root.attrInt32=256 where attrInt32=18, multiUpdate=false) ...";
 				
 				doc = new MongoDocumentUpdate();
 				doc.addUpdateCriteria("root.attrInt32", 256);
-				doc.addSelectorCriteria("root.attrInt32", 18);
+				doc.addSelectorCriteria("attrInt32", 18);
 				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false, false);				
 			}
 			
@@ -237,9 +244,11 @@
 				
 				var doc:MongoDocumentDelete = new MongoDocumentDelete();
 				doc.addSelectorCriteria("attrString", "newValue");
+				log.debug("First delete in delete_clickHandler");
 				mongoDriver.deleteDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false);
 				
-				// 2nd way to initialize MongoDocumentDelete
+				// 2nd way to initialize MongoDocumentDelete ICI 2 delete de suite ca fait planter la socket qui est decalee
+				log.debug("2nd delete in delete_clickHandler");
 				mongoDriver.deleteDoc(Constantes.documentsCollectionName,
 					new MongoDocumentDelete(MongoDocument.or(new MongoDocument("attrString", "newValue"), new MongoDocument("attrString", "otherValue"))),
 					onLastErrorCallback, true);
@@ -379,22 +388,47 @@
 				);
 			}
 			
+			private var nbResp:int=0;
+			protected function sendManyCommands_clickHandler(event:Event):void {
+				log.evt("Dans listerClickHandler");
+				console.text += "\n------------------------------------------------------\nListage des 10 1ers de la collection '"+Constantes.documentsCollectionName+"' ...\n";
+				
+				var query:MongoDocumentQuery = new MongoDocumentQuery();
+				var returnFields:MongoDocument = null;
+				
+				nbResp=0;
+				for (var i:int=0; i < 50 ; i++) {
+					console.text += "Sending command #"+i+". ";
+					mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onShortResponseReceived, returnFields, 0, 10 );
+				}
+			}
+			
+			private function onShortResponseReceived(responseDoc:MongoDocumentResponse):void {
+				log.evt("Reception of a short response : "+responseDoc.toString());
+				console.text += "Here is response #"+nbResp+". ";
+				nbResp++;
+			}			
 		]]>
 	</fx:Script>
 	<s:HGroup width="100%">
-		<s:Button label="Effacer" click="effacerClickHandler(event)"/>
-		<s:Button label="Connexion" click="connexionClickHandler(event)"/>
-		<s:Button label="Déconnexion" click="deconnexionClickHandler(event)"/>
-		<s:Button id="creerCollection" label="Créer collection"
+		<s:Button label="Clean console" click="effacerClickHandler(event)"/>
+		<s:Button label="Connect" click="connexionClickHandler(event)"/>
+		<s:Button label="Disconnect" click="deconnexionClickHandler(event)"/>
+	</s:HGroup>
+	<s:HGroup width="100%">
+		<s:Button id="creerCollection" label="Create collection"
 				  click="creerCollectionClickHandler(event)"/>
-		<s:Button id="supprimerCollection" label="SupprimerCollection"
+		<s:Button id="renameCollection" label="Rename collection"
+				  click="renameCollectionClickHandler(event)"/>
+		<s:Button id="supprimerCollection" label="Drop collection"
 				  click="supprimerCollection_clickHandler(event)"/>
-		<s:Button label="Ajouter" click="ajouterClickHandler(event)"/>
-		<s:Button id="lister" label="Lister" click="lister_clickHandler(event)"/>
+		<s:Button label="Add" click="ajouterClickHandler(event)"/>
+		<s:Button id="lister" label="Find" click="lister_clickHandler(event)"/>
 		<s:Button id="getMore" label="GetMore" click="getMore_clickHandler(event)"/>
 		<s:Button id="update" label="Update" click="update_clickHandler(event)"/>
 		<s:Button id="delete" label="Delete" click="delete_clickHandler(event)"/>
 		<s:Button id="killCursor" label="Kill last Cursor" click="killCursor_clickHandler(event)"/>
+		<s:Button id="sendManycommands" label="Send 50 commands" click="sendManyCommands_clickHandler(event)"/>
 	</s:HGroup>
 	<s:HGroup width="100%">
 		<s:Button id="complex_find1" label="complex find gte" click="complex_find1_clickHandler(event)"/>
@@ -409,6 +443,6 @@
 		<s:Button id="aggregation_group" label="group attrString" click="aggregation_group_clickHandler(event)"/>
 		<s:Button id="aggregation_mapreduce1" label="mapReduce1 attrString" click="aggregation_mapReduce1_clickHandler(event)"/>
 	</s:HGroup>
-	<s:RichText id="console" width="100%" height="100%" text="RichText">Sortie Console</s:RichText>
+	<mx:TextArea id="console" width="100%" height="100%" valueCommit="console.verticalScrollPosition = console.maxVerticalScrollPosition" text="Console output"/>	
 </s:Group>
 
