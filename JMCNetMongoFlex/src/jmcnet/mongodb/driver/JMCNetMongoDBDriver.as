@@ -58,8 +58,8 @@ package jmcnet.mongodb.driver
 		public var hostname:String="";
 		public var port:uint=27017;
 		public var databaseName:String="";
-		public var socketPoolMin:uint=10;
-		public var socketPoolMax:uint=50;
+		public var socketPoolMin:uint=2;
+		public var socketPoolMax:uint=5;
 		public var socketTimeOutMs:uint=10000;
 		public var username:String=null;
 		public var password:String=null;
