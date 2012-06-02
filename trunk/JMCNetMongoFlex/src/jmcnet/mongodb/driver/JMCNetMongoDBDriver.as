@@ -5,8 +5,10 @@ package jmcnet.mongodb.driver
 	import flash.utils.ByteArray;
 	import flash.utils.getQualifiedClassName;
 	
+	import jmcnet.libcommun.communs.structures.FifoStack;
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	import jmcnet.libcommun.security.MD5;
+	import jmcnet.libcommun.socketpool.EventSocketPool;
 	import jmcnet.libcommun.socketpool.SocketPool;
 	import jmcnet.libcommun.socketpool.TimedSocket;
 	import jmcnet.mongodb.bson.BSONDecoder;
@@ -21,6 +23,7 @@ package jmcnet.mongodb.driver
 	import jmcnet.mongodb.documents.MongoDocumentResponse;
 	import jmcnet.mongodb.documents.MongoDocumentUpdate;
 	import jmcnet.mongodb.errors.ExceptionJMCNetMongoDB;
+	import jmcnet.mongodb.messages.MongoMsgAbstract;
 	import jmcnet.mongodb.messages.MongoMsgDelete;
 	import jmcnet.mongodb.messages.MongoMsgGetMore;
 	import jmcnet.mongodb.messages.MongoMsgInsert;
@@ -69,7 +72,12 @@ package jmcnet.mongodb.driver
 		 */
 		public var logDocument:Boolean = false;
 		
+		// The socket pool
 		private var _pool:SocketPool;
+		
+		// The waiting for pool commands
+		[ArrayElementType("jmcnet.mongodb.messages.MongoMsgAbstract")]
+		private var _awaitingMessages:FifoStack = new FifoStack();
 		
 		// Safe Mode parameters
 		public static const SAFE_MODE_MAJORITY:int=-2;
@@ -144,11 +152,9 @@ package jmcnet.mongodb.driver
 			log.debug("Calling doAuthentication socket #"+socket.id);
 			
 			// send getnonce command to get the nonce
-			sendQuery(socket, "$cmd", new MongoDocumentQuery(new MongoDocument("getnonce",1)), null, 0, 1);
+			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(new MongoDocument("getnonce",1)), null, 0, 1);
 			
-			// lookup the answer
-			log.debug("Waiting for answer");
-			new MongoResponseReader(socket, onGetNonce, _pool);
+			sendMessageToSocket(msg, socket);			
 		}
 		
 		/**
@@ -176,11 +182,9 @@ package jmcnet.mongodb.driver
 			log.debug("pwd="+pwd);
 			var digest:String = MD5.encrypt(nonce + username +  pwd);
 			doc.addQueryCriteria("key", digest);
-			sendQuery(response.socket, "$cmd", doc, null, 0, 1);
+			var msg:MongoMsgQuery = prepareQuery("$cmd", doc, null, 0, 1);
 			
-			// lookup the answer
-			log.debug("Waiting for answer");
-			new MongoResponseReader(response.socket, onGetAuthentResponse, _pool);
+			sendMessageToSocket(msg, response.socket);	
 		}
 		
 		/**
@@ -244,46 +248,31 @@ package jmcnet.mongodb.driver
 			}
 		}
 		
+		/**
+		 * Called when no more active socket are available.
+		 */
 		private function onPoolClose(event:Event):void {
 			log.evt("Connection with MongoDB database has closed.");
-			this.dispatchEvent(new EventMongoDB("closeConnection"));
+			this.dispatchEvent(new EventMongoDB(EVT_CLOSE_CONNECTION));
 		}
 		
+		/**
+		 * Called when the first active socket is open.
+		 */
 		private function onPoolOpen(event:Event):void {
 			log.evt("Connection with MongoDB database has opened.");
-			this.dispatchEvent(new EventMongoDB("connectOK")); 
+			this.dispatchEvent(new EventMongoDB(EVT_CONNECTOK)); 
+			
+			// We listen for available sockets in the pool
+			_pool.addEventListener(SocketPool.EVENT_FREE_SOCKET,onFreeSocket);
 		}
 		
+		/**
+		 * Check if the socket pool is connected. ie has almost one connected socket.
+		 */
 		public function isConnecte():Boolean {
 			if (_pool != null) return _pool.connected();
 			else return false;
-		}
-		
-		private function getConnectedSocket():TimedSocket {
-			if (!isConnecte()) {
-				log.warn("Not connected to MongoDB");
-				throw new ExceptionJMCNetMongoDB("Not connected to MongoDB");
-			}
-			var socket:TimedSocket = _pool.getFreeSocket();
-			if (socket == null) {
-				var errMsg:String="No more free socket connected to MongoDB. Pool min value too small ?";
-				log.warn(errMsg);
-				throw new ExceptionJMCNetMongoDB(errMsg);
-			}
-			
-			return socket;
-		}
-		
-		private function checkSafeModeAndReleaseSocket(safeCallback:Function, socket:TimedSocket):void {
-			log.debug("Calling JMCNetMongoDBDriver::checkSafeMode safeCallback="+safeCallback+" socket #"+socket.id);
-			if (_w > 0) {
-				// Safe mode
-				var q:MongoDocumentQuery = new MongoDocumentQuery(_lastErrorDoc);
-				sendQuery(socket, "$cmd", q, null, 0, -1);
-				log.debug("Waiting for getLastError (safeMode) answer");
-				new MongoResponseReader(socket, safeCallback == null ? onResponseLastError:safeCallback, _pool);
-			}
-			else _pool.releaseSocket(socket);
 		}
 		
 		/**
@@ -296,21 +285,12 @@ package jmcnet.mongodb.driver
 		public function insertDoc(collectionName:String, documents:Array, safeCallback:Function=null, continueOnError:Boolean=true):void {
 			log.info("Calling JMCNetMongoDBDriver::insert collectionName="+collectionName+" safeCallback="+safeCallback+" continueOnError="+continueOnError+" documents="+ObjectUtil.toString(documents)); 
 			
-			var socket:TimedSocket=getConnectedSocket();
 			var msg:MongoMsgInsert = new MongoMsgInsert(databaseName, collectionName, continueOnError);
 			for each (var doc:Object in documents) {
 				msg.addDocument(doc);
 			}
 			
-			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("JMCNetMongoDBDriver::insert sending msg : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
-			
-			// There is no DB answer
-			// safeMode ?
-			checkSafeModeAndReleaseSocket(safeCallback, socket);			
+			prepareMsgForSending(msg, safeCallback);
 		}
 		
 		/**
@@ -333,14 +313,25 @@ package jmcnet.mongodb.driver
 								 awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
 			log.info("Calling JMCNetMongoDBDriver::query collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 
-			var socket:TimedSocket=getConnectedSocket();
+			var msg:MongoMsgQuery = prepareQuery(collectionName, query, returnFields, numberToSkip, numberToReturn, tailableCursor, awaitData, exhaust, partial);
 			
-			sendQuery(socket, collectionName, query, returnFields, numberToSkip, numberToReturn, tailableCursor, awaitData, exhaust, partial);
+			prepareMsgForSending(msg, callback);
+		}
+
+		private function prepareQuery(collectionName:String, query:MongoDocumentQuery, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):MongoMsgQuery {
+			log.info("Calling JMCNetMongoDBDriver::prepareQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			var flags:uint = tailableCursor ? 2:0 +
+				slaveOk ? 4:0 +
+				noCursorTimeout ? 16:0 +
+				awaitData ? 32:0 +
+				exhaust ? 64:0 +
+				partial ? 128:0;
 			
-			// lookup the answer
-			log.debug("Waiting for answer");
-			if (callback == null) callback = onResponseQueryReady;
-			new MongoResponseReader(socket, callback, _pool);
+			var msg:MongoMsgQuery = new MongoMsgQuery(databaseName, collectionName, numberToSkip, numberToReturn, tailableCursor, slaveOk, noCursorTimeout, awaitData, exhaust, partial);
+			msg.query = query;
+			msg.returnFieldsSelector = returnFields;
+
+			return msg;
 		}
 		
 		/**
@@ -353,45 +344,15 @@ package jmcnet.mongodb.driver
 		public function getMoreDoc(collectionName:String, cursorID:Cursor, callback:Function=null, numberToReturn:int=0):void {
 			log.info("Calling JMCNetMongoDBDriver::getMore collectionName="+collectionName+" cursorID="+cursorID+" numberToReturn="+numberToReturn);
 			
-			var socket:TimedSocket=getConnectedSocket();
-			
 			var msg:MongoMsgGetMore = new MongoMsgGetMore(databaseName, collectionName, cursorID, numberToReturn);
-			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("Sending getMore msg to database : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
 			
-			// lookup the answer
-			log.debug("Waiting for answer");
-			if (callback == null) callback = onResponseQueryReady;
-			new MongoResponseReader(socket, callback, _pool);
-		}
-		
-		private function sendQuery(socket:TimedSocket, collectionName:String, query:MongoDocumentQuery, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
-			log.info("Calling JMCNetMongoDBDriver::sendQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
-			var flags:uint = tailableCursor ? 2:0 +
-				slaveOk ? 4:0 +
-				noCursorTimeout ? 16:0 +
-				awaitData ? 32:0 +
-				exhaust ? 64:0 +
-				partial ? 128:0;
-			
-			var msg:MongoMsgQuery = new MongoMsgQuery(databaseName, collectionName, numberToSkip, numberToReturn, tailableCursor, slaveOk, noCursorTimeout, awaitData, exhaust, partial);
-			msg.query = query;
-			msg.returnFieldsSelector = returnFields;
-			
-			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("Sending query msg to database : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
+			prepareMsgForSending(msg, callback);
 		}
 		
 		private function onResponseQueryReady (response:MongoDocumentResponse):void {
 			log.debug("JMCNetMongoDBDriver::Calling onResponseReady response="+response.toString());
 			// Dispatch the answer
-			this.dispatchEvent(new EventMongoDB("responseReceived", response));
+			this.dispatchEvent(new EventMongoDB(EVT_RESPONSE_RECEIVED, response));
 		}
 		
 		/**
@@ -401,19 +362,14 @@ package jmcnet.mongodb.driver
 		 */
 		public function runCommand(command:MongoDocument, callback:Function=null ):void {
 			log.info("Calling JMCNetMongoDBDriver::runCommand command="+command.toString()+" callback="+callback);
-			var socket:TimedSocket = getConnectedSocket();
-			
-			var q:MongoDocumentQuery = new MongoDocumentQuery(command);
-			sendQuery(socket, "$cmd", q, null, 0, -1);
-			log.debug("Waiting for answer");
-			if (callback == null) callback = onResponseRunCommandReady;
-			new MongoResponseReader(socket, callback, _pool);
+			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(command), null, 0, -1);
+			prepareMsgForSending(msg, callback);
 		}
 		
 		private function onResponseRunCommandReady (response:MongoDocumentResponse):void {
 			log.info("JMCNetMongoDBDriver::Calling onResponseRunCommandReady response="+response.toString());
 			// Dispatch the answer
-			this.dispatchEvent(new EventMongoDB("runCommand", response));
+			this.dispatchEvent(new EventMongoDB(EVT_RUN_COMMAND, response));
 		}
 		
 		public function getLastError(safeCallback:Function=null):void {
@@ -423,7 +379,7 @@ package jmcnet.mongodb.driver
 		
 		private function onResponseLastError(response:MongoDocumentResponse):void {
 			log.debug("JMCNetMongoDBDriver::Calling onResponseLastError response="+response.toString());
-			this.dispatchEvent(new EventMongoDB("lastError", response));
+			this.dispatchEvent(new EventMongoDB(EVT_LAST_ERROR, response));
 		}
 		
 		/**
@@ -436,20 +392,11 @@ package jmcnet.mongodb.driver
 		 */
 		public function updateDoc(collectionName:String, update:MongoDocumentUpdate, safeCallback:Function = null, upsert:Boolean=false, multiUpdate:Boolean=false):void {
 			log.info("Calling JMCNetMongoDBDriver::update collectionName="+collectionName+" safeCallback="+safeCallback+" update="+update+" upsert="+upsert+" multiUpdate="+multiUpdate);
-			var socket:TimedSocket = getConnectedSocket();
-			
+
 			var msg:MongoMsgUpdate = new MongoMsgUpdate(databaseName, collectionName, update, upsert, multiUpdate);
 			
 			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("JMCNetMongoDBDriver::update sending msg : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
-			
-			// There is no answer
-			
-			// safeMode ?
-			checkSafeModeAndReleaseSocket(safeCallback, socket);
+			prepareMsgForSending(msg, safeCallback);
 		}
 		
 		/**
@@ -461,20 +408,11 @@ package jmcnet.mongodb.driver
 		 */
 		public function deleteDoc(collectionName:String, doc:MongoDocumentDelete, safeCallback:Function = null, singleRemove:Boolean=false):void {
 			log.info("Calling JMCNetMongoDBDriver::deleteDoc collectionName="+collectionName+" safeCallback="+safeCallback+" deleteDoc="+doc+" singleRemove="+singleRemove);
-			var socket:TimedSocket = getConnectedSocket();
 			
 			var msg:MongoMsgDelete = new MongoMsgDelete(databaseName, collectionName, doc, singleRemove);
 			
 			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("JMCNetMongoDBDriver::deleteDoc sending msg : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
-			
-			// There is no answer
-			
-			// safeMode ?
-			checkSafeModeAndReleaseSocket(safeCallback, socket);
+			prepareMsgForSending(msg, safeCallback);
 		}
 		
 		/**
@@ -484,35 +422,41 @@ package jmcnet.mongodb.driver
 		 */
 		public function killCursors(doc:MongoDocumentKillCursors, safeCallback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::killCursor safeCallback="+safeCallback+" doc="+ObjectUtil.toString(doc));
-			var socket:TimedSocket = getConnectedSocket();
 			
 			var msg:MongoMsgKillCursors = new MongoMsgKillCursors(doc);
 			
 			// Write into socket
-			var bson:ByteArray = msg.toBSON();
-			if (logBSON) log.evt("JMCNetMongoDBDriver::killCursors sending msg : "+HelperByteArray.byteArrayToString(bson));
-			socket.writeBytes(bson);
-			socket.flush();
-			
-			// There is no answer
-			
-			// safeMode ?
-			checkSafeModeAndReleaseSocket(safeCallback, socket);
+			prepareMsgForSending(msg, safeCallback);
 		}
 		
+		/**
+		 * Create a collection.
+		 * @param collectionName (String) : the name of the collection to create
+		 * @param safeCallback (Function) : the callback called when getLastError is send (cf. safe mode)
+		 */
 		public function createCollection(collectionName:String,  safeCallback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::createCollection collectionName="+collectionName+" safeCallback="+safeCallback);
 			runCommand(new MongoDocument("create",collectionName), safeCallback);
 		}
 		
+		/**
+		 * Drop a collection.
+		 * @param collectionName (String) : the name of the collection to drop
+		 * @param safeCallback (Function) : the callback called when getLastError is send (cf. safe mode)
+		 */
 		public function dropCollection(collectionName:String,  safeCallback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::dropCollection collectionName="+collectionName+" safeCallback="+safeCallback);
 			runCommand(new MongoDocument("drop",collectionName), safeCallback);
 		}
 		
+		/**
+		 * Rename a collection.
+		 * @param collectionName (String) : the name of the collection to rename
+		 * @param safeCallback (Function) : the callback called when getLastError is send (cf. safe mode)
+		 */
 		public function renameCollection(collectionName:String, newCollectionName:String, safeCallback:Function = null):void {
 			log.info("Calling JMCNetMongoDBDriver::renameCollection collectionName="+collectionName+" newCollectionName="+newCollectionName+" safeCallback="+safeCallback);
-			runCommand(new MongoDocument("rename",collectionName), safeCallback);
+			runCommand(new MongoDocument("renameCollection",databaseName+"."+collectionName).addKeyValuePair("to",databaseName+"."+newCollectionName), safeCallback);
 		}
 		
 		/**
@@ -613,5 +557,97 @@ package jmcnet.mongodb.driver
 			
 			runCommand(mapReduceCmd, callback);
 		}
+		
+		/**
+		 * Called when a socket is available in the pool
+		 */
+		private function onFreeSocket(event:EventSocketPool):void {
+			log.evt("Calling JMCNetMongoDBDriver::onFreeSocket : A free socket is available in the pool");
+			// get the first awaiting message
+			var msg:Object = _awaitingMessages.pop();
+			
+			// if awaiting list is not empty, pop and send message
+			if (msg == null) {
+				log.debug("No awaiting messages");
+				return ;
+			}
+			
+			// gets a socket
+			var socket:TimedSocket = getConnectedSocket();
+			// if no more socket -> repush the message
+			if (socket == null) {
+				log.warn("There is no more socket in onFreeSocket... Curious.");
+				return ;
+			}
+			
+			// sending
+			sendMessageToSocket(msg as MongoMsgAbstract, socket);
+		}
+		
+		private function sendMessageToSocket(msg:MongoMsgAbstract, socket:TimedSocket):void {
+			log.debug("Sending mesg="+msg+" into socket #"+socket.id);
+			// send the message by writing BSON into socket
+			var bson:ByteArray = msg.toBSON();
+			if (logBSON) log.evt("JMCNetMongoDBDriver::sendMessageToSocket sending msg : "+HelperByteArray.byteArrayToString(bson));
+			socket.writeBytes(bson);
+			socket.flush();
+			
+			if (!msg.needResponse) {
+				log.debug("There no answer to wait for. Check if safe mode.");
+				// There is no DB answer
+				// safeMode ?
+				checkSafeModeAndReleaseSocket(msg.callback, socket);
+			}
+			else {
+				// lookup the answer
+				log.debug("There is an answer to wait for.");
+				if (msg.callback == null) msg.callback = onResponseQueryReady;
+				new MongoResponseReader(socket, msg.callback, _pool);
+			}
+		}
+		
+		private function getConnectedSocket():TimedSocket {
+			if (!isConnecte()) {
+				log.warn("Not connected to MongoDB");
+				throw new ExceptionJMCNetMongoDB("Not connected to MongoDB");
+			}
+			var socket:TimedSocket = _pool.getFreeSocket();
+			// When there is no more free socket, just wait...
+			
+			return socket;
+		}
+		
+		private function checkSafeModeAndReleaseSocket(safeCallback:Function, socket:TimedSocket):void {
+			log.debug("Calling JMCNetMongoDBDriver::checkSafeMode safeCallback="+safeCallback+" socket #"+socket.id);
+			if (_w > 0) {
+				// Safe mode
+				log.debug("We are in safe Mode");
+				var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(_lastErrorDoc), null, 0, -1);
+				msg.callback = safeCallback == null ? onResponseLastError:safeCallback;
+				sendMessageToSocket(msg, socket);
+				log.debug("Waiting for getLastError (safeMode) answer");
+			}
+			else _pool.releaseSocket(socket);
+		}
+		
+		private function prepareMsgForSending(msg:MongoMsgAbstract, callback:Function=null):void {
+			log.debug("Calling prepareMsgForSending");
+			
+			msg.callback = callback;
+			var socket:TimedSocket=getConnectedSocket();
+			
+			if (socket != null) {
+				log.debug("There is an available socket -> sends directly in socket #"+socket.id);
+				// Write into socket
+				sendMessageToSocket(msg, socket);
+			}
+			else {
+				log.debug("There is no more available socket. We have to wait ...");
+				_awaitingMessages.push(msg);
+			}
+			
+			log.debug("End of prepareMsgForSending awaitingMessages.length="+_awaitingMessages.length);
+		}
+		
 	}
 }

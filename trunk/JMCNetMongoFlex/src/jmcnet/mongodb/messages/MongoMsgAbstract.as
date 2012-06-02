@@ -14,6 +14,9 @@ package jmcnet.mongodb.messages
 		private var _collectionName:String;
 		private var _header:MongoMsgHeader;
 		
+		// The callback that will be called when we get an DB response to this message
+		private var _callback:Function=null;
+		
 		public function MongoMsgAbstract(dbName:String, collectionName:String, opCode:uint) {
 			if ( getQualifiedClassName(super) == "MongoMsgAbstract" )
 				throw new UninitializedError("The class MongoMsgAbstract is abstract and cannot be instanciated.");
@@ -49,5 +52,14 @@ package jmcnet.mongodb.messages
 			if (_header == null) return null;
 			return _header.toBSON();
 		}
+		
+		/**
+		 * True if this kind of message need an answer. Must be overriden by messages that need an DB response (like query)
+		 */
+		public function get needResponse():Boolean { return false;}
+
+		public function get callback():Function { return _callback;	}
+		public function set callback(value:Function):void {	_callback = value; }
+
 	}
 }

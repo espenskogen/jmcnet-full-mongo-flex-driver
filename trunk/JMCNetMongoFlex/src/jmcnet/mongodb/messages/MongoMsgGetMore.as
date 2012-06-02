@@ -53,5 +53,7 @@ package jmcnet.mongodb.messages
 			
 			return msg;
 		}
+		
+		override public function get needResponse():Boolean { return true;} 
 	}
 }

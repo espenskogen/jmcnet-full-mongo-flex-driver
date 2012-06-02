@@ -8,6 +8,8 @@ package jmcnet.mongodb.messages
 	import jmcnet.mongodb.bson.HelperByteArray;
 	import jmcnet.mongodb.documents.MongoDocument;
 	import jmcnet.mongodb.documents.MongoDocumentQuery;
+	
+	import mx.states.OverrideBase;
 
 	/**
 	 * A generic Query message command.
@@ -79,5 +81,7 @@ package jmcnet.mongodb.messages
 			
 			return msg;
 		}
+		
+		override public function get needResponse():Boolean { return true;} 
 	}
 }

@@ -55,7 +55,7 @@ package jmcnet.mongodb.messages
 				// transform the answer in MongoDocumentResponse
 				var reponse:MongoDocumentResponse = new MongoDocumentResponse(_responseLength, _response, _socket);
 				if (MongoDocument.logDocument) log.debug("Calling callback method");
-				if (MongoDocument.logDocument) log.evt("Received response : "+reponse.toString());
+				log.evt("MongoResponseReader::onDataReceived : Received complete response : "+reponse.toString());
 				if (_callback != null) _callback(reponse);
 				// release the socket
 				_pool.releaseSocket(_socket as TimedSocket);
