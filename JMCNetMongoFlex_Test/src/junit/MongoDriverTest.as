@@ -485,7 +485,9 @@ package junit
 			log.debug("Calling onTimer1");
 			// Find the doc
 			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_RESPONSE_RECEIVED, onResponseReceived1, 1000);
-			driver.queryDoc("testu", new MongoDocumentQuery());
+			var query:MongoDocumentQuery=new MongoDocumentQuery();
+			query.addQueryCriteria("_id", ObjectID.createFromString("myObject"));
+			driver.queryDoc("testu", query);
 		}
 		
 		public function onResponseReceived1(event:EventMongoDB, ... args):void {
@@ -498,7 +500,7 @@ package junit
 			
 			log.debug("Received doc : "+rep.documents[0].toString());
 			var vo:TestComplexObjectIDVO = rep.documents[0].toObject(TestComplexObjectIDVO);
-			Assert.assertEquals("086d794f626a65637400", vo._id.toString());
+			Assert.assertEquals("00086d794f626a6563740000", vo._id.toString());
 			Assert.assertEquals(16, vo.attrInt32);
 			
 			Assert.assertNotNull(vo.testvo);
@@ -529,6 +531,15 @@ package junit
 			Assert.assertEquals("4rd String", vo.typeArrayTestvo[0].attrString);
 			Assert.assertEquals(126.456, vo.typeArrayTestvo[0].attrNumber);
 			Assert.assertTrue(vo.typeArrayTestvo[0].attrBoolean);
+		}
+		
+		[Test]
+		public function testObjectIDFromByte():void {
+			var o1:ObjectID = new ObjectID();
+			var str:String = o1.toString();
+			var o2:ObjectID = ObjectID.fromStringRepresentation(str);
+			trace("o1="+o1.toString()+" o2="+o2.toString());
+			Assert.assertEquals(o1.toString(), o2.toString());
 		}
 	}
 }
