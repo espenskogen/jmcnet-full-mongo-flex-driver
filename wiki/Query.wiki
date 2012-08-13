@@ -1,4 +1,5 @@
 #summary Most complete query example
+#labels Featured
 
 <wiki:toc max_depth="2" />
 
