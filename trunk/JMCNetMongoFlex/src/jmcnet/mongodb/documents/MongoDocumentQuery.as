@@ -53,28 +53,20 @@ package jmcnet.mongodb.documents
 			
 			var ba:ByteArray = new ByteArray();
 			ba.endian = Endian.LITTLE_ENDIAN;
-			ba.writeBytes(BSONEncoder.bsonWriteDocument(_query.table));
-			// size
-//			ba.writeUnsignedInt(0);
-//			ba.writeByte(BSONEncoder.BSON_DOCUMENT);
-//			ba.writeMultiByte("$query","utf-8");
-//			ba.writeByte(BSONEncoder.BSON_TERMINATOR);
-//			ba.writeBytes(BSONEncoder.encodeObjectToBSON(_query.table,null));
-			// Write size
-//			ba.position = 0;
-//			ba.writeUnsignedInt(ba.length);			
 			
+			var g:MongoDocument = new MongoDocument();
+			g.addKeyValuePair("$query", _query);
 			if (_orderBy != null) {
-				ba.writeBytes(BSONEncoder.bsonWriteDocument(_orderBy.table, null));
-//				ba.writeByte(BSONEncoder.BSON_DOCUMENT);
-//				ba.writeMultiByte("$orderby","utf-8");
-//				ba.writeByte(BSONEncoder.BSON_TERMINATOR);
-//				ba.writeBytes(BSONEncoder.encodeObjectToBSON(_orderBy.table,null));
+				g.addKeyValuePair("$orderby",_orderBy);
 			}
 			
-//			ba.writeByte(BSONEncoder.BSON_TERMINATOR);
+			ba.writeBytes(BSONEncoder.bsonWriteDocument(g));
 			
-			
+//			ba.writeBytes(BSONEncoder.bsonWriteDocument(_query.table));
+//			
+//			if (_orderBy != null) {
+//				ba.writeBytes(BSONEncoder.bsonWriteDocument(_orderBy.table, null));
+//			}
 			
 			if (BSONEncoder.logBSON) log.debug("MongoDocumentQuery::toBSON bson="+HelperByteArray.byteArrayToString(ba));
 			return ba;
