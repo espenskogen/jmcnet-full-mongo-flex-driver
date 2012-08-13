@@ -45,6 +45,11 @@ package junit
 		[After]
 		public function tearDown():void
 		{
+			if (driver.isConnecte()) {
+				// clean up -> delete object
+				driver.dropCollection("testu");
+				driver.disconnect();
+			}
 		}
 		
 		[BeforeClass]
@@ -53,8 +58,7 @@ package junit
 		}
 		
 		[AfterClass]
-		public static function tearDownAfterClass():void
-		{
+		public static function tearDownAfterClass():void {
 		}
 		
 		/**
@@ -314,13 +318,16 @@ package junit
 			log.debug("testHelperByteArray : resStr=\n'"+resStr+"'");
 			var expectedResult:String=
 				"{\n"+
-				"    attr1 : \"value1\",\n"+
-				"    attr2 : \"value2\"\n"+
-				"},\n"+
-				"{\n"+
-				"    attr1 : 1,\n"+
-				"    attr2 : -1\n"+
+				"    $query : {\n" +
+				"            attr1 : \"value1\",\n"+
+				"            attr2 : \"value2\"\n"+
+				"     },\n"+
+				"    $orderby : {\n"+
+				"            attr1 : 1,\n"+
+				"            attr2 : -1\n"+
+				"     }\n"+
 				"}";
+			
 			Assert.assertEquals(expectedResult, resStr);
 		}
 		
@@ -343,7 +350,7 @@ package junit
 			var bson:ByteArray = msg.toBSON();
 			log.debug("testMongoDocumentQuery bson="+HelperByteArray.byteArrayToString(bson));
 			
-			var expectedResult:String="0x76 0x0 0x0 0x0 0x7b 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0xd4 0x7 0x0 0x0 0x0 0x0 0x0 0x0 0x64 0x62 0x4e 0x61 0x6d 0x65 0x2e 0x63 0x6f 0x6c 0x6c 0x65 0x63 0x74 0x69 0x6f 0x6e 0x4e 0x61 0x6d 0x65 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x29 0x0 0x0 0x0 0x2 0x61 0x74 0x74 0x72 0x31 0x0 0x7 0x0 0x0 0x0 0x76 0x61 0x6c 0x75 0x65 0x31 0x0 0x2 0x61 0x74 0x74 0x72 0x32 0x0 0x7 0x0 0x0 0x0 0x76 0x61 0x6c 0x75 0x65 0x32 0x0 0x0 0x1b 0x0 0x0 0x0 0x10 0x61 0x74 0x74 0x72 0x31 0x0 0x1 0x0 0x0 0x0 0x10 0x61 0x74 0x74 0x72 0x32 0x0 0xff 0xff 0xff 0xff 0x0";
+			var expectedResult:String="0x8d 0x0 0x0 0x0 0x7b 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0xd4 0x7 0x0 0x0 0x0 0x0 0x0 0x0 0x64 0x62 0x4e 0x61 0x6d 0x65 0x2e 0x63 0x6f 0x6c 0x6c 0x65 0x63 0x74 0x69 0x6f 0x6e 0x4e 0x61 0x6d 0x65 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x5b 0x0 0x0 0x0 0x3 0x24 0x71 0x75 0x65 0x72 0x79 0x0 0x29 0x0 0x0 0x0 0x2 0x61 0x74 0x74 0x72 0x31 0x0 0x7 0x0 0x0 0x0 0x76 0x61 0x6c 0x75 0x65 0x31 0x0 0x2 0x61 0x74 0x74 0x72 0x32 0x0 0x7 0x0 0x0 0x0 0x76 0x61 0x6c 0x75 0x65 0x32 0x0 0x0 0x3 0x24 0x6f 0x72 0x64 0x65 0x72 0x62 0x79 0x0 0x1b 0x0 0x0 0x0 0x10 0x61 0x74 0x74 0x72 0x31 0x0 0x1 0x0 0x0 0x0 0x10 0x61 0x74 0x74 0x72 0x32 0x0 0xff 0xff 0xff 0xff 0x0 0x0";
 			Assert.assertEquals(expectedResult, HelperByteArray.byteArrayToString(bson));
 		}
 		
@@ -493,8 +500,6 @@ package junit
 		public function onResponseReceived1(event:EventMongoDB, ... args):void {
 			log.debug("Calling onResponseReceived");
 			
-			// clean up -> delete object
-			driver.dropCollection("testu");
 			var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
 			Assert.assertEquals(1, rep.documents.length);
 			
@@ -540,6 +545,153 @@ package junit
 			var o2:ObjectID = ObjectID.fromStringRepresentation(str);
 			trace("o1="+o1.toString()+" o2="+o2.toString());
 			Assert.assertEquals(o1.toString(), o2.toString());
+		}
+		
+		[Test(async, timeout=5000)]
+		public function testOrderBy():void {
+			log.debug("Calling testOrderBy");
+			driver.databaseName = "testDatabase";
+			driver.hostname = "jmcsrv2";
+			driver.port = 27017;
+			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnect2, 1000);
+			driver.connect();
+		}
+		
+		public function onConnect2(event:EventMongoDB, ... args):void {
+			log.debug("Calling onConnect2");
+			// We are connected, so write the doc
+			var testvo:TestVO = new TestVO("String1", 20, 123.456, false);
+			var testvo1:TestVO = new TestVO("String2", 21, 124.456, true);
+			var testvo2:TestVO = new TestVO("String3", 19, 125.456, false);
+			
+			driver.insertDoc("testu", [testvo, testvo1, testvo2]);
+			
+			// Wait a sec
+			var t:Timer = new Timer(1000, 1);
+			t.start();
+			Async.handleEvent(this, t, TimerEvent.TIMER, onTimer2, 2000);
+		}
+		
+		public function onTimer2(event:TimerEvent, ... args):void {
+			log.debug("Calling onTimer2");
+			// Find the doc
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_RESPONSE_RECEIVED, onResponseReceived2, 1000);
+			var query:MongoDocumentQuery=new MongoDocumentQuery();
+			// query.addQueryCriteria("attrString", "String");
+			query.addOrderByCriteria("attrInt32", true);
+			driver.queryDoc("testu", query);
+		}
+		
+		public function onResponseReceived2(event:EventMongoDB, ... args):void {
+			log.debug("Calling onResponseReceived2");
+			
+			var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
+			Assert.assertEquals(3, rep.documents.length);
+			
+			log.debug("Received doc[0] : "+rep.documents[0].toString());
+			log.debug("Received doc[1] : "+rep.documents[1].toString());
+			log.debug("Received doc[2] : "+rep.documents[2].toString());
+			var vo1:TestVO = rep.documents[0].toObject(TestVO);
+			var vo2:TestVO = rep.documents[1].toObject(TestVO);
+			var vo3:TestVO = rep.documents[2].toObject(TestVO);
+			
+			Assert.assertEquals(vo1.attrString, "String3");
+			Assert.assertEquals(vo2.attrString, "String1");
+			Assert.assertEquals(vo3.attrString, "String2");
+			
+			Assert.assertEquals(vo1.attrInt32, 19);
+			Assert.assertEquals(vo2.attrInt32, 20);
+			Assert.assertEquals(vo3.attrInt32, 21);
+			
+			// Dans l'ordre inverse
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_RESPONSE_RECEIVED, onResponseReceived3, 1000);
+			var query:MongoDocumentQuery=new MongoDocumentQuery();
+			// query.addQueryCriteria("attrString", "String");
+			query.addOrderByCriteria("attrInt32", false);
+			driver.queryDoc("testu", query);
+		}
+		
+		public function onResponseReceived3(event:EventMongoDB, ... args):void {
+			log.debug("Calling onResponseReceived3");
+			
+			
+			var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
+			Assert.assertEquals(3, rep.documents.length);
+			
+			log.debug("Received doc[0] : "+rep.documents[0].toString());
+			log.debug("Received doc[1] : "+rep.documents[1].toString());
+			log.debug("Received doc[2] : "+rep.documents[2].toString());
+			var vo1:TestVO = rep.documents[0].toObject(TestVO);
+			var vo2:TestVO = rep.documents[1].toObject(TestVO);
+			var vo3:TestVO = rep.documents[2].toObject(TestVO);
+			
+			Assert.assertEquals(vo1.attrString, "String2");
+			Assert.assertEquals(vo2.attrString, "String1");
+			Assert.assertEquals(vo3.attrString, "String3");
+			
+			Assert.assertEquals(vo1.attrInt32, 21);
+			Assert.assertEquals(vo2.attrInt32, 20);
+			Assert.assertEquals(vo3.attrInt32, 19);
+		}
+		
+		[Test(async, timeout=5000)]
+		public function testOrderByReturnFields():void {
+			log.debug("Calling testOrderByReturnFields");
+			driver.databaseName = "testDatabase";
+			driver.hostname = "jmcsrv2";
+			driver.port = 27017;
+			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOrderByReturnFields, 1000);
+			driver.connect();
+		}
+		
+		public function onConnectOrderByReturnFields(event:EventMongoDB, ... args):void {
+			log.debug("Calling onConnectOrderByReturnFields");
+			// We are connected, so write the doc
+			var testvo:TestVO = new TestVO("String1", 20, 123.456, false);
+			var testvo1:TestVO = new TestVO("String2", 21, 124.456, true);
+			var testvo2:TestVO = new TestVO("String3", 19, 125.456, false);
+			
+			driver.insertDoc("testu", [testvo, testvo1, testvo2]);
+			
+			// Wait a sec
+			var t:Timer = new Timer(1000, 1);
+			t.start();
+			Async.handleEvent(this, t, TimerEvent.TIMER, onTimerOrderByReturnFields, 2000);
+		}
+		
+		public function onTimerOrderByReturnFields(event:TimerEvent, ... args):void {
+			log.debug("Calling onTimerOrderByReturnFields");
+			// Find the doc
+			var query:MongoDocumentQuery=new MongoDocumentQuery();
+			query.addOrderByCriteria("attrInt32", true);
+			// Ask for "attrString" attribute only
+			driver.queryDoc("testu", query, onResponseReceivedOrderByReturnFields, new MongoDocument("attrString", 1));
+		}
+		
+		public function onResponseReceivedOrderByReturnFields(rep:MongoDocumentResponse):void {
+			log.debug("Calling onResponseReceivedOrderByReturnFields responseDoc="+rep);
+			
+			Assert.assertEquals(3, rep.documents.length);
+			
+			log.debug("Received doc[0] : "+rep.documents[0].toString());
+			log.debug("Received doc[1] : "+rep.documents[1].toString());
+			log.debug("Received doc[2] : "+rep.documents[2].toString());
+			var vo1:MongoDocument = rep.documents[0] as MongoDocument;
+			var vo2:MongoDocument = rep.documents[1] as MongoDocument;
+			var vo3:MongoDocument = rep.documents[2] as MongoDocument;
+			
+			// Verify that doc are in order
+			Assert.assertEquals(vo1.getValue("attrString"), "String3");
+			Assert.assertEquals(vo2.getValue("attrString"), "String1");
+			Assert.assertEquals(vo3.getValue("attrString"), "String2");
+			
+			// Verify that there is only attrString attribute
+			Assert.assertNull(vo1.getValue("attrInt32"));
+			Assert.assertNull(vo1.getValue("attrNumber"));
+			Assert.assertNull(vo1.getValue("attrBoolean"));
+			Assert.assertNull(vo1.getValue("attrArray"));
 		}
 	}
 }

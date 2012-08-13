@@ -194,6 +194,16 @@
 				var returnFields:MongoDocument = null;
 				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived, returnFields, 0, 10 );				
 			}
+			
+			protected function listerOrderBy_clickHandler(event:MouseEvent):void
+			{
+				log.evt("Dans listerOrderByClickHandler");
+				console.text += "\n------------------------------------------------------\nListage de la collection orderby attrInt32'"+Constantes.documentsCollectionName+"' ...";
+				
+				var query:MongoDocumentQuery = new MongoDocumentQuery();
+				query.addOrderByCriteria("attrInt32", true);
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived);				
+			}
 						
 			private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
 				log.evt("Reception of a response : "+responseDoc.toString());
@@ -423,8 +433,9 @@
 		<s:Button id="supprimerCollection" label="Drop collection"
 				  click="supprimerCollection_clickHandler(event)"/>
 		<s:Button label="Add" click="ajouterClickHandler(event)"/>
-		<s:Button id="lister" label="Find" click="lister_clickHandler(event)"/>
+		<s:Button id="list" label="Find" click="lister_clickHandler(event)"/>
 		<s:Button id="getMore" label="GetMore" click="getMore_clickHandler(event)"/>
+		<s:Button id="orderby" label="Find-Orberby" click="listerOrderBy_clickHandler(event)"/>
 		<s:Button id="update" label="Update" click="update_clickHandler(event)"/>
 		<s:Button id="delete" label="Delete" click="delete_clickHandler(event)"/>
 		<s:Button id="killCursor" label="Kill last Cursor" click="killCursor_clickHandler(event)"/>
