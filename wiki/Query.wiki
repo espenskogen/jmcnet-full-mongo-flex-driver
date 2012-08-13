@@ -10,6 +10,7 @@ This page will explain, how to use send more complex query. This means :
   # cursor functions :
     # getMore function for pagination,
     # killCursor
+  # more complex queries using "orderby" and "returnFields"
 
 = Details =
 
@@ -132,6 +133,43 @@ The signature is the following :
  * @param safeCallback (Function) : the callback called when operation is finished (depending on safe mode)
  */
 public function killCursors(doc:MongoDocumentKillCursors, safeCallback:Function = null):void
+}}}
+
+== Complex queries using orderby and returnFields ==
+You can order the result using any of the field in the document using the DocumentQuery.addOrderByCriteria. An orderByCriteria is an key/value pair containing the attribute used to order and a boolean representing the ascending (true) or descending (false) order.
+Here is an example :
+{{{
+// query all docs with attrString="a value to filter" ordered by attrInt32 field in ascending order
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+query.addQueryCriteria("attrString", "a value to filter");
+query.addOrderByCriteria("attrInt32", true);
+driver.queryDoc("collection", query);
+}}}
+
+In the previous example, all fields of the document are returned. If you need only a subset all the document's fields, you must use the "returnFields" attribute of the queryDoc method. This is a MongoDocument field containing key/value pairs for each field you want to return. The value 1 means you want the field, the value 0 means, you don't want the field to be returned.
+Examples (combined with OrderBy) :
+{{{
+
+// Query all doc order by attrInt32 attribute (ascending) and returns only the attrString field
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+query.addOrderByCriteria("attrInt32", true);
+// Ask for "attrString" attribute only
+driver.queryDoc("collection", query, onResponseReceivedCallback, new MongoDocument("attrString", 1));
+
+// Query all doc order by attrInt32 attribute (descending) and returns all fields but attrString
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+query.addOrderByCriteria("attrInt32", true);
+// Ask for "attrString" attribute only
+driver.queryDoc("collection", query, onResponseReceivedCallback, new MongoDocument("attrString", 0));
+}}}
+
+== Complete example ==
+Suppose you want to program a query that does (in SQL) : select attrString from Collection where attrBoolean='true' order by attrInt32 desc :
+{{{
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+query.addQueryCriteria("attrBoolean", true);
+query.addOrderByCriteria("attrInt32", false);
+driver.queryDoc("collection", query, onResponseReceivedCallback, new MongoDocument("attrString", 1));
 }}}
 
 = See also =
