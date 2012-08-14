@@ -108,6 +108,7 @@ Here is a complete example :
 {{{
 ...
 mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOK);
+mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_AUTH_ERROR, onAuthError);
 mongoDriver.connect();
 ...
 
@@ -117,9 +118,15 @@ protected function onConnectOK(event:EventMongoDB):void {
 	...
 	}
 }
+
+protected function onAuthError(event:EventMongoDB):void {
+	// Handle Authentication error
+	...
 }}} 
 
 When (and only when) the message JMCNetMongoDBDriver.EVT_CONNECTOK is thrown, you can use drivers methods like query, update, ...
+
+The EVT_AUTH_ERROR indicates that username or password provided in Driver initialization is incorrect.
 
 == Stopping connection to server ==
 Stopping connection to server is done by calling _disconnect()_ method on driver.
