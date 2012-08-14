@@ -122,6 +122,7 @@ protected function onConnectOK(event:EventMongoDB):void {
 protected function onAuthError(event:EventMongoDB):void {
 	// Handle Authentication error
 	...
+}
 }}} 
 
 When (and only when) the message JMCNetMongoDBDriver.EVT_CONNECTOK is thrown, you can use drivers methods like query, update, ...
