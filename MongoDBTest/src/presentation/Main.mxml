@@ -55,6 +55,7 @@
 
 				// Add generic mongoDB listener
 				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOK);
+				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_AUTH_ERROR, onAuthError);
 				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_CLOSE_CONNECTION, onCloseConnexion);
 				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_LAST_ERROR, onLastError);
 				mongoDriver.addEventListener(JMCNetMongoDBDriver.EVT_RUN_COMMAND, onRunCommand);
@@ -96,8 +97,14 @@
 			
 			protected function onConnectOK(event:EventMongoDB):void {
 				console.text += " OK";
-				if (mongoDriver.isConnecte()) console.text += " Connecté";
-				else console.text += " Déconnecté";
+				if (mongoDriver.isConnecte()) console.text += " Connected";
+				else console.text += " Disconnected";
+			}
+			
+			protected function onAuthError(event:EventMongoDB):void {
+				console.text += " KO. Authentication NOK.";
+				if (mongoDriver.isConnecte()) console.text += " Connected";
+				else console.text += " Disconnected";
 			}
 			
 			protected function onConnectKO(event:EventMongoDB):void {

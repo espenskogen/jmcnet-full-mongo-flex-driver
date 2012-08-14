@@ -9,7 +9,9 @@ package jmcnet.mongodb.driver
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	import jmcnet.libcommun.security.MD5;
 	import jmcnet.libcommun.socketpool.EventSocketPool;
+	import jmcnet.libcommun.socketpool.PoolInfos;
 	import jmcnet.libcommun.socketpool.SocketPool;
+	import jmcnet.libcommun.socketpool.SocketPoolAuthenticated;
 	import jmcnet.libcommun.socketpool.TimedSocket;
 	import jmcnet.mongodb.bson.BSONDecoder;
 	import jmcnet.mongodb.bson.BSONEncoder;
@@ -48,7 +50,8 @@ package jmcnet.mongodb.driver
 	 * @param logBSON (Boolean) : if true trace BSON encoding/decoding. Default value is false,
 	 * @param logDocument (Boolean) : if true trace all Document manipulation. Default value is false.
 	 */
-	[Event(name=EVT_CONNECTOK, type="newjmcnetds.EventMongoDB")]
+	[Event(name=EVT_CONNECTOK, type="newjmcnetds.EventMongoDB")] // called when driver is connected and authenticated in auth mode
+	[Event(name=EVT_AUTH_ERROR, type="newjmcnetds.EventMongoDB")] // called when authentication failed
 	[Event(name=EVT_CLOSE_CONNECTION, type="newjmcnetds.EventMongoDB")]
 	[Event(name=EVT_LAST_ERROR, type="newjmcnetds.EventMongoDB")]
 	[Event(name=EVT_RUN_COMMAND, type="newjmcnetds.EventMongoDB")]
@@ -73,7 +76,7 @@ package jmcnet.mongodb.driver
 		public var logDocument:Boolean = false;
 		
 		// The socket pool
-		private var _pool:SocketPool;
+		private var _pool:SocketPoolAuthenticated;
 		
 		// The waiting for pool commands
 		[ArrayElementType("jmcnet.mongodb.messages.MongoMsgAbstract")]
@@ -87,6 +90,7 @@ package jmcnet.mongodb.driver
 		public static const SAFE_MODE_REPLICAS_SAFE:int=2;
 		
 		public static const EVT_CONNECTOK:String="connectOK";
+		public static const EVT_AUTH_ERROR:String="authenticationError";
 		public static const EVT_CLOSE_CONNECTION:String="closeConnection";
 		public static const EVT_LAST_ERROR:String="lastError";
 		public static const EVT_RUN_COMMAND:String="runCommand";
@@ -99,7 +103,6 @@ package jmcnet.mongodb.driver
 		private var _j:Boolean=false;
 		private var _lastErrorDoc:MongoDocument;
 		private var _firstAuthenticationError:Boolean = true;
-		
 		
 		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(JMCNetMongoDBDriver));
 		
@@ -129,9 +132,9 @@ package jmcnet.mongodb.driver
 			
 			log.info("JMCNetMongoDBDriver::connect username="+this.username+" password="+(this.password == null ? "null":"xxxxxxxx"));
 			
-			if (_pool == null) _pool = new SocketPool(socketPoolMin, socketPoolMax, socketTimeOutMs);
-			_pool.addEventListener("poolDisconnected",onPoolClose);
-			_pool.addEventListener("poolConnected", onPoolOpen);
+			if (_pool == null) _pool = new SocketPoolAuthenticated(socketPoolMin, socketPoolMax, socketTimeOutMs);
+			_pool.addEventListener(SocketPool.EVENT_POOL_DISCONNECTED,onPoolClose);
+			_pool.addEventListener(SocketPool.EVENT_POOL_CONNECTED, onPoolOpen);
 			if (this.username != null) {
 				// Connect with authentication callback
 				_pool.connect(hostname, port, doAuthentication);
@@ -153,6 +156,7 @@ package jmcnet.mongodb.driver
 			
 			// send getnonce command to get the nonce
 			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(new MongoDocument("getnonce",1)), null, 0, 1);
+			msg.callback = onGetNonce;
 			
 			sendMessageToSocket(msg, socket);			
 		}
@@ -184,6 +188,8 @@ package jmcnet.mongodb.driver
 			doc.addQueryCriteria("key", digest);
 			var msg:MongoMsgQuery = prepareQuery("$cmd", doc, null, 0, 1);
 			
+			msg.callback = onGetAuthentResponse;
+			
 			sendMessageToSocket(msg, response.socket);	
 		}
 		
@@ -204,11 +210,14 @@ package jmcnet.mongodb.driver
 				log.warn(errmsg);
 				if (_firstAuthenticationError) {
 					_firstAuthenticationError = false;
-					throw new ExceptionJMCNetMongoDB(errmsg);
+					log.evt("Dispatch evt EVT_AUTH_ERROR");
+					this.dispatchEvent(new EventMongoDB(EVT_AUTH_ERROR));
 				}
 			}
 			else {
-				log.info("Authentication succeed.");
+				log.info("Authentication succeed -> put socket in free list.");
+				// We send connectOK when authentication is ready, and only for the first socket
+				_pool.onAuthenticateOk(response.socket);
 			}
 		}
 		
@@ -261,14 +270,15 @@ package jmcnet.mongodb.driver
 		 */
 		private function onPoolOpen(event:Event):void {
 			log.evt("Connection with MongoDB database has opened.");
-			this.dispatchEvent(new EventMongoDB(EVT_CONNECTOK)); 
-			
+			// Call only in non auth mode. Else it is called when authentication succeed
+			this.dispatchEvent(new EventMongoDB(EVT_CONNECTOK));
+				
 			// We listen for available sockets in the pool
 			_pool.addEventListener(SocketPool.EVENT_FREE_SOCKET,onFreeSocket);
 		}
 		
 		/**
-		 * Check if the socket pool is connected. ie has almost one connected socket.
+		 * Check if the socket pool is connected (and authenticated in auth mode). ie has almost one connected socket.
 		 */
 		public function isConnecte():Boolean {
 			if (_pool != null) return _pool.connected();
