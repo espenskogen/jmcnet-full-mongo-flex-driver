@@ -10,11 +10,35 @@
 	<fx:Script>
 		<![CDATA[
 			import junit.MongoDriverTest;
+			import org.flexunit.runner.Request;
 			
 			public function currentRunTestSuite():Array
 			{
 				var testsToRun:Array = new Array();
-				testsToRun.push(junit.MongoDriverTest);
+				
+				testsToRun.push(Request.methods(junit.MongoDriverTest,["testComplexDocumentToObject",
+					"testMongoMsgHeader",
+					"testMongoMsgInsert",
+					"testHelperByteArraySimple",
+					"testHelperByteArrayObject",
+					"testMongoDocumentQuery",
+					"testMongoMsgQuery",
+					"testMongoMsgUpdate",
+					"testBSONDecoder",
+					"testGetObjectAttributes",
+					"testDocumentToObject",
+					"testBSONEncoderBoolean",
+					"testComplexObject",
+					"testObjectIDFromByte",
+					"testOrderBy",
+					"testOrderByReturnFields",
+					"testBSONEncoderObject",
+					"testAuthenticationNok",
+					"testBSONEncoderSimpleObject",
+					"testBSONEncoderString",
+					"testBSONEncoderNumber",
+					"testBSONEncoderInt",
+					"testBSONEncoderDate"]));
 				return testsToRun;
 			}
 			

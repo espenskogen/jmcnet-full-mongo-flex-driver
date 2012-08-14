@@ -36,6 +36,21 @@ package junit
 	{		
 		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDriverTest));
 		
+		/** For this test to be ok, you must have a mongodb server in auth mode with a database named "testDatabase" and a user name "testu" with password "testu"
+		 *  The command to create this are the following :
+		 *  use admin;
+		 *  db.auth("root","password"); // log with the admin account
+		 *  use testDatabase; // or create database is it doesn't exists
+		 *  db.addUser("testu", "testu"); // add the testu user
+		 */
+		
+		private static var DATABASENAME:String="testDatabase";
+		private static var USERNAME:String="testu";
+		private static var PASSWORD:String="testu";
+		private static var SERVER:String="jmcsrv2";
+		private static var PORT:uint=27017;
+
+		
 		[Before]
 		public function setUp():void {
 			JMCNetLogger.setLogEnabled(true, false);
@@ -469,11 +484,14 @@ package junit
 			var testvo3:TestVO = new TestVO("4rd String", 22, 126.456, true);
 			obj = new TestComplexObjectIDVO(ObjectID.createFromString("myObject"), 16, testvo, new Array(testvo1, testvo2), new Array(testvo3));
 			
-			driver.databaseName = "testDatabase";
-			driver.hostname = "jmcsrv2";
-			driver.port = 27017;
+			driver.databaseName = DATABASENAME;
+			driver.hostname = SERVER;
+			driver.port = PORT;
+			driver.username = USERNAME;
+			driver.password = PASSWORD;
 			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
 			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnect1, 1000);
+			Async.failOnEvent(this, driver, JMCNetMongoDBDriver.EVT_AUTH_ERROR, 1000);
 			driver.connect();
 		}
 		
@@ -498,9 +516,10 @@ package junit
 		}
 		
 		public function onResponseReceived1(event:EventMongoDB, ... args):void {
-			log.debug("Calling onResponseReceived");
+			log.debug("Calling onResponseReceived response="+ (event == null ? "null":event.result as MongoDocumentResponse));
 			
-			var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
+			var rep:MongoDocumentResponse = event.result as MongoDocumentResponse;
+			Assert.assertEquals(1, rep.numberReturned);
 			Assert.assertEquals(1, rep.documents.length);
 			
 			log.debug("Received doc : "+rep.documents[0].toString());
@@ -550,11 +569,14 @@ package junit
 		[Test(async, timeout=5000)]
 		public function testOrderBy():void {
 			log.debug("Calling testOrderBy");
-			driver.databaseName = "testDatabase";
-			driver.hostname = "jmcsrv2";
-			driver.port = 27017;
+			driver.databaseName = DATABASENAME;
+			driver.hostname = SERVER;
+			driver.port = PORT;
+			driver.username = USERNAME;
+			driver.password = PASSWORD;
 			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
 			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnect2, 1000);
+			Async.failOnEvent(this, driver, JMCNetMongoDBDriver.EVT_AUTH_ERROR, 1000);
 			driver.connect();
 		}
 		
@@ -638,11 +660,14 @@ package junit
 		[Test(async, timeout=5000)]
 		public function testOrderByReturnFields():void {
 			log.debug("Calling testOrderByReturnFields");
-			driver.databaseName = "testDatabase";
-			driver.hostname = "jmcsrv2";
-			driver.port = 27017;
+			driver.databaseName = DATABASENAME;
+			driver.hostname = SERVER;
+			driver.port = PORT;
+			driver.username = USERNAME;
+			driver.password = PASSWORD;
 			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
 			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectOrderByReturnFields, 1000);
+			Async.failOnEvent(this, driver, JMCNetMongoDBDriver.EVT_AUTH_ERROR, 1000);
 			driver.connect();
 		}
 		
@@ -692,6 +717,24 @@ package junit
 			Assert.assertNull(vo1.getValue("attrNumber"));
 			Assert.assertNull(vo1.getValue("attrBoolean"));
 			Assert.assertNull(vo1.getValue("attrArray"));
+		}
+		
+		[Test(async, timeout=5000)]
+		public function testAuthenticationNok():void {
+			log.debug("Calling testAuthenticationNok");
+			driver.databaseName = DATABASENAME;
+			driver.hostname = SERVER;
+			driver.port = PORT;
+			driver.username = USERNAME;
+			driver.password = "badPassword";
+			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_AUTH_ERROR, onAuthError, 1000);
+			Async.failOnEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, 1000);
+			driver.connect();
+		}
+		
+		private function onAuthError(event:EventMongoDB, ... args):void {
+			log.debug("Received an expected EVT_AUTH_ERROR");
 		}
 	}
 }
