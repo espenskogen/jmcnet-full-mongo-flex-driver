@@ -10,7 +10,7 @@ This page will explain, how to manipulate direct native Flex objects without nee
   # restore those object directly.
 Those features are avalaible thanks to Flex introspection.
 
-Special cases are explained for Array and ArrayCollection at the end of this description.
+Special cases are explained for Array and !ArrayCollection at the end of this description.
 
 = Details =
 We have seen in previous documentation (see [CRUD]), that _insertDoc_, _queryDoc_ deals with generic MongoDocument.
@@ -151,7 +151,7 @@ In the example we can notice that :
   # `_id` value can be provided before _insertDoc_. This is done by using the _ObjectID_ class Cf. [ObjectID].
 
 = Array and !ArrayCollection manipulation =
-Manipulatin Array or ArrayCollection is a little more tricky.
+Manipulatin Array or !ArrayCollection is a little more tricky.
 Here is how you can deal with those objects :
 Note : this is part of the JUnit module you can find in browsing source code.
 {{{
@@ -264,7 +264,7 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 }}}
 
 So, the structure returned is :
-Array of 1 MongoDocument containing an Array named "arrayCollectionName" containing 2 MongoDocument each with attrx attributes.
+Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
 = See also =
   * [Home],
