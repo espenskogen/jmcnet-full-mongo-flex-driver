@@ -8,7 +8,9 @@
 This page will explain, how to manipulate direct native Flex objects without needing to transform them into MongoDocument. This feature permits you to :
   # save object directly without conversion,
   # restore those object directly.
-Those features are avalaible thanks to Flex introspection. 
+Those features are avalaible thanks to Flex introspection.
+
+Special cases are explained for Array and ArrayCollection at the end of this description.
 
 = Details =
 We have seen in previous documentation (see [CRUD]), that _insertDoc_, _queryDoc_ deals with generic MongoDocument.
@@ -147,6 +149,9 @@ In the example we can notice that :
   # not typed Array (like _arrayTestvo_ in example) are converted into generic Object in return because the driver can't know the real object type,
   # strongly typed Array - declared with `[ArrayElementType("TestVO")]` - are converted into strongly typed Array (no lost of type during restore).
   # `_id` value can be provided before _insertDoc_. This is done by using the _ObjectID_ class Cf. [ObjectID].
+
+= Array and ArrayCollection manipulation =
+
 
 = See also =
   * [Home],
