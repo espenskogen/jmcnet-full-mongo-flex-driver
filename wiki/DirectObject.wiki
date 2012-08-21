@@ -165,7 +165,27 @@ private var array:ArrayCollection = new ArrayCollection([
 // We are connected, so write the doc composed of an ArrayCollection
 var doc:MongoDocument = new MongoDocument().addArrayCollection("arrayCollectionName", array);
 driver.insertDoc("testu", [doc], onTimerArrayCollection);
+}}}
 
+{{{
+// In the database we can see :
+> db.testu.find()
+{
+  "_id" : ObjectId("5033b40c9fd9b604e4b46c32"),
+  "arrayCollectionName" : [
+    {
+       "attr1" : "attr1",
+       "attr2" : 12,
+       "attr3" : true },
+    {
+       "attr1" : "attr2",
+       "attr2" : 13,
+       "attr3" : false }
+  ]
+}
+}}}
+
+{{{
 ...
 // Query the result
 var query:MongoDocumentQuery=new MongoDocumentQuery();
@@ -207,7 +227,8 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 	
 }}}
 
-{{{...
+{{{
+...
 // Convert the result into ArrayCollection and verify the result		
 	// Try to convert in a ArrayCollection
 	var arrayCol:ArrayCollection = new ArrayCollection(array);
@@ -225,7 +246,8 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 			
 }}}
 
-{{{...
+{{{
+...
 // Convert each Object in the array into a generic Object for manipulation
 	// 3rd test -> convert into generic object
 	log.debug("Converting into generic object");
@@ -239,8 +261,10 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 	Assert.assertEquals(13, obj2.attr2);
 	Assert.assertEquals(false, obj2.attr3);
 }
-
 }}}
+
+So, the structure returned is :
+Array of 1 MongoDocument containing an Array named "arrayCollectionName" containing 2 MongoDocument each with attrx attributes.
 
 = See also =
   * [Home],
