@@ -150,7 +150,7 @@ In the example we can notice that :
   # strongly typed Array - declared with `[ArrayElementType("TestVO")]` - are converted into strongly typed Array (no lost of type during restore).
   # `_id` value can be provided before _insertDoc_. This is done by using the _ObjectID_ class Cf. [ObjectID].
 
-= !Array and !ArrayCollection manipulation =
+= Array and !ArrayCollection manipulation =
 
 
 = See also =
