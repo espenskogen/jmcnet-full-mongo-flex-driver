@@ -151,7 +151,96 @@ In the example we can notice that :
   # `_id` value can be provided before _insertDoc_. This is done by using the _ObjectID_ class Cf. [ObjectID].
 
 = Array and !ArrayCollection manipulation =
+Manipulatin Array or ArrayCollection is a little more tricky.
+Here is how you can deal with those objects :
+Note : this is part of the JUnit module you can find in browsing source code.
+{{{
+// The arrayCollection to deals with
+private var array:ArrayCollection = new ArrayCollection([
+	{ attr1:"value1", attr2:12, attr3:true},
+	{ attr1:"value2", attr2:13, attr3:false}
+]);
 
+...
+// We are connected, so write the doc composed of an ArrayCollection
+var doc:MongoDocument = new MongoDocument().addArrayCollection("arrayCollectionName", array);
+driver.insertDoc("testu", [doc], onTimerArrayCollection);
+
+...
+// Query the result
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+// Ask for all object in collections
+driver.queryDoc("testu", query, onResponseReceivedArrayCollection);
+}}}
+
+{{{
+...
+// Analyse and decode the result
+public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):void {
+	Assert.assertEquals(1, rep.documents.length);
+	
+	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
+	Assert.assertNotNull(vo1.getValue("_id"));
+	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
+	
+}}}
+
+{{{
+...
+// Direct manipulation of the returned Array named "arrayCollectionName"		
+	// Try to convert the arrayCollectionName into an Array
+	// var array:Array = vo1.toObject(Array); // this cannot work because returned doc is not an Array
+	Assert.assertTrue(vo1.getValue("arrayCollectionName") is Array);
+	var array:Array = vo1.getValue("arrayCollectionName") as Array;
+	Assert.assertNotNull(array);
+	Assert.assertEquals(2, array.length);
+			
+	// Verify 1rst object returned
+	Assert.assertEquals("value1", (array[0] as MongoDocument).getValue("attr1"));
+	Assert.assertEquals(12, (array[0] as MongoDocument).getValue("attr2"));
+	Assert.assertEquals(true, (array[0] as MongoDocument).getValue("attr3"));
+			
+	// Verify 2nd object returned
+	Assert.assertEquals("value2", (array[1] as MongoDocument).getValue("attr1"));
+	Assert.assertEquals(13, (array[1] as MongoDocument).getValue("attr2"));
+	Assert.assertEquals(false, (array[1] as MongoDocument).getValue("attr3"));
+	
+}}}
+
+{{{...
+// Convert the result into ArrayCollection and verify the result		
+	// Try to convert in a ArrayCollection
+	var arrayCol:ArrayCollection = new ArrayCollection(array);
+	Assert.assertEquals(2, arrayCol.length);
+			
+	// Verify 1rst object returned
+	Assert.assertEquals("value1", (arrayCol[0] as MongoDocument).getValue("attr1"));
+	Assert.assertEquals(12, (arrayCol[0] as MongoDocument).getValue("attr2"));
+	Assert.assertEquals(true, (arrayCol[0] as MongoDocument).getValue("attr3"));
+			
+	// Verify 2nd object returned
+	Assert.assertEquals("value2", (arrayCol[1] as MongoDocument).getValue("attr1"));
+	Assert.assertEquals(13, (arrayCol[1] as MongoDocument).getValue("attr2"));
+	Assert.assertEquals(false, (arrayCol[1] as MongoDocument).getValue("attr3"));
+			
+}}}
+
+{{{...
+// Convert each Object in the array into a generic Object for manipulation
+	// 3rd test -> convert into generic object
+	log.debug("Converting into generic object");
+	var obj1:Object = (arrayCol[0] as MongoDocument).toObject(Object);
+	Assert.assertEquals("value1", obj1.attr1);
+	Assert.assertEquals(12, obj1.attr2);
+	Assert.assertEquals(true, obj1.attr3);
+			
+	var obj2:Object = (arrayCol[1] as MongoDocument).toObject(Object);
+	Assert.assertEquals("value2", obj2.attr1);
+	Assert.assertEquals(13, obj2.attr2);
+	Assert.assertEquals(false, obj2.attr3);
+}
+
+}}}
 
 = See also =
   * [Home],
