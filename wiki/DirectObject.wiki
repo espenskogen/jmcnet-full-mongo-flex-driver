@@ -163,7 +163,7 @@ private var array:ArrayCollection = new ArrayCollection([
 
 ...
 // We are connected, so write the doc composed of an ArrayCollection
-var doc:MongoDocument = new MongoDocument().addArrayCollection("arrayCollectionName", array);
+var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
 driver.insertDoc("testu", [doc], onTimerArrayCollection);
 }}}
 
@@ -279,7 +279,7 @@ private var array:ArrayCollection = new ArrayCollection([
 
 ...
 // We are connected, so write the doc composed of an ArrayCollection
-var doc:MongoDocument = new MongoDocument().addArrayCollection("arrayCollectionName", array);
+var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
 driver.insertDoc("testu", [doc], onTimerArrayCollection);
 
 ...
