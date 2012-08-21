@@ -267,8 +267,8 @@ So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
 = New in 1.5 : Generic objects manipulation =
-In some case, you prefer manipulate more generic Flex objects like Object and ArrayCollection.
-You can achieve this using the MongoDocument.toGenericObject method.
+In some case, you prefer manipulate more generic Flex objects like Object and !ArrayCollection.
+You can achieve this using the !MongoDocument.toGenericObject() method.
 You use it like this :
 {{{
 // The arrayCollection to deals with
@@ -316,6 +316,44 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 	Assert.assertEquals(false, arrayCol1[1].attr3);	
 }}}
 This use is more simplier that the one explain in previous chapter and must be prefer if possible.
+
+Another simple exmaple demonstrating the toGenericObject() method :
+{{{
+private var array:ArrayCollection = new ArrayCollection([
+	{ attr1:"value1", attr2:12, attr3:true},
+	{ attr1:"value2", attr2:13, attr3:false}
+]);
+...
+var m:MongoDocument = new MongoDocument();
+m.addKeyValuePair("a1",new String("string1"));
+var d:Date = new Date();
+m.addKeyValuePair("a2",d);
+m.addKeyValuePair("a3",new Number(12));
+m.addKeyValuePair("a4",new Boolean(true));
+m.addKeyValuePair("a5",new MongoDocument().addKeyValuePair("k", "value").addKeyValuePair("l",15.9));
+m.addKeyValuePair("a6", ["string1", "string2"]);
+m.addKeyValuePair("a7", array);
+			
+// toGenericObject conversion and do some verifications
+var obj:Object = m.toGenericObject();
+Assert.assertEquals("string1", obj.a1);
+Assert.assertEquals(d, obj.a2);
+Assert.assertEquals(12, obj.a3);
+Assert.assertEquals(true, obj.a4);
+			
+Assert.assertEquals("value", obj.a5.k);
+Assert.assertEquals(15.9, obj.a5.l);
+			
+Assert.assertEquals("string1", obj.a6[0]);
+Assert.assertEquals("string2", obj.a6[1]);
+			
+Assert.assertEquals("value1", obj.a7[0].attr1);
+Assert.assertEquals(12, obj.a7[0].attr2);
+Assert.assertEquals(true, obj.a7[0].attr3);
+Assert.assertEquals("value2", obj.a7[1].attr1);
+Assert.assertEquals(13, obj.a7[1].attr2);
+Assert.assertEquals(false, obj.a7[1].attr3);
+}}}
 
 = See also =
   * [Home],
