@@ -266,6 +266,57 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
+= New in 1.5 : Generic objects manipulation =
+In some case, you prefer manipulate more generic Flex objects like Object and ArrayCollection.
+You can achieve this using the MongoDocument.toGenericObject method.
+You use it like this :
+{{{
+// The arrayCollection to deals with
+private var array:ArrayCollection = new ArrayCollection([
+	{ attr1:"value1", attr2:12, attr3:true},
+	{ attr1:"value2", attr2:13, attr3:false}
+]);
+
+...
+// We are connected, so write the doc composed of an ArrayCollection
+var doc:MongoDocument = new MongoDocument().addArrayCollection("arrayCollectionName", array);
+driver.insertDoc("testu", [doc], onTimerArrayCollection);
+
+...
+// Query the result
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+// Ask for all object in collections
+driver.queryDoc("testu", query, onResponseReceivedArrayCollection);
+
+...
+// Analyse and decode the result
+public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):void {
+	Assert.assertEquals(1, rep.documents.length);
+	
+	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
+	Assert.assertNotNull(vo1.getValue("_id"));
+	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
+
+	// Convert by using toGenericObject
+	var genericObject:Object = vo1.toGenericObject();
+	Assert.assertTrue(genericObject.arrayCollectionName is ArrayCollection);
+	Assert.assertTrue(genericObject._id is ObjectID);
+	var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
+	Assert.assertNotNull(arrayCol1);
+	Assert.assertEquals(2, arrayCol1.length);
+			
+	// Verify 1rst object returned
+	Assert.assertEquals("value1", arrayCol1[0].attr1);
+	Assert.assertEquals(12, arrayCol1[0].attr2);
+	Assert.assertEquals(true, arrayCol1[0].attr3);
+			
+	// Verify 2nd object returned
+	Assert.assertEquals("value2", arrayCol1[1].attr1);
+	Assert.assertEquals(13, arrayCol1[1].attr2);
+	Assert.assertEquals(false, arrayCol1[1].attr3);	
+}}}
+This use is more simplier that the one explain in previous chapter and must be prefer if possible.
+
 = See also =
   * [Home],
   * [CRUD] (Create, Retrieve, Update, Delete),
