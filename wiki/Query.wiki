@@ -173,6 +173,9 @@ query.addOrderByCriteria("attrInt32", false);
 driver.queryDoc("collection", query, onResponseReceivedCallback, new MongoDocument("attrString", 1));
 }}}
 
+== New in 1.5 - Responder and Token capabilities ==
+
+
 = See also =
   * [Home],
   * [Installation],
