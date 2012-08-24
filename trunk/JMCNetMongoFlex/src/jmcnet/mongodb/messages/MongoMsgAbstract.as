@@ -4,6 +4,7 @@ package jmcnet.mongodb.messages
 	import flash.utils.getQualifiedClassName;
 	
 	import jmcnet.mongodb.bson.BSONEncoder;
+	import jmcnet.mongodb.driver.MongoResponder;
 	
 	/**
 	 * Some abstract method used by MongoDB messages
@@ -15,7 +16,10 @@ package jmcnet.mongodb.messages
 		private var _header:MongoMsgHeader;
 		
 		// The callback that will be called when we get an DB response to this message
-		private var _callback:Function=null;
+//		private var _callback:Function=null;
+		
+		// The responder in case of using a responder. Normally it is not possible to have both responder and _callback
+		private var _responder:MongoResponder=null;
 		
 		public function MongoMsgAbstract(dbName:String, collectionName:String, opCode:uint) {
 			if ( getQualifiedClassName(super) == "MongoMsgAbstract" )
@@ -58,8 +62,10 @@ package jmcnet.mongodb.messages
 		 */
 		public function get needResponse():Boolean { return false;}
 
-		public function get callback():Function { return _callback;	}
-		public function set callback(value:Function):void {	_callback = value; }
+//		public function get callback():Function { return _callback;	}
+//		public function set callback(value:Function):void {	_callback = value; }
 
+		public function get responder():MongoResponder { return _responder;	}
+		public function set responder(value:MongoResponder):void { _responder = value; }
 	}
 }

@@ -1,6 +1,9 @@
 package jmcnet.mongodb.messages 
 {
+	import flash.events.Event;
+	import flash.events.IOErrorEvent;
 	import flash.events.ProgressEvent;
+	import flash.events.SecurityErrorEvent;
 	import flash.utils.ByteArray;
 	import flash.utils.Endian;
 	
@@ -11,32 +14,35 @@ package jmcnet.mongodb.messages
 	import jmcnet.mongodb.bson.HelperByteArray;
 	import jmcnet.mongodb.documents.MongoDocument;
 	import jmcnet.mongodb.documents.MongoDocumentResponse;
+	import jmcnet.mongodb.driver.MongoResponder;
 
 	/**
 	 * Wait and read an answer from Mongo database
 	 */
 	public class MongoResponseReader
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoResponseReader));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoResponseReader);
 		
-		private var _callback:Function = null;
+		private var _responder:MongoResponder= null;
 		private var _socket:TimedSocket=null;
 		private var _responseLength:uint=0;
 		private var _response:ByteArray=null;
 		private var _pool:SocketPool=null;
 		
-		public function MongoResponseReader(socket:TimedSocket, callback:Function, socketPool:SocketPool) {
-			if (MongoDocument.logDocument) log.info("MongoResponseReader starting ...");
+		public function MongoResponseReader(socket:TimedSocket, responder:MongoResponder, socketPool:SocketPool) {
+			if (MongoDocument.logDocument) log.info("Starting ...");
 			_socket = socket;
-			_callback = callback;
+			_responder = responder;
 			_pool = socketPool;
 			_responseLength=0;
 			_response = new ByteArray();
 			_socket.addEventListener(ProgressEvent.SOCKET_DATA, onDataReceived);
+			_socket.addEventListener(IOErrorEvent.IO_ERROR, onError);
+			_socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onError);
 		}
 		
 		private function onDataReceived(event:ProgressEvent):void {
-			if (MongoDocument.logDocument) log.evt("MongoResponseReader::onDataReceived Receiving database answer socket #"+_socket.id);
+			if (MongoDocument.logDocument) log.evt("onDataReceived Receiving database answer socket #"+_socket.id);
 			// initialize responseLenght if not allready done
 			if (_responseLength == 0 && _socket.bytesAvailable > 4) {
 				_socket.endian = Endian.LITTLE_ENDIAN;
@@ -47,16 +53,15 @@ package jmcnet.mongodb.messages
 			// Est-ce que le chargement est complet ? +4 car on a deja lu la taille
 			if (_responseLength > 0 && _socket.bytesAvailable + 4 == _responseLength) {
 				if (MongoDocument.logDocument) log.debug("The response is complete");
-				//Stop listening the answer
-				_socket.removeEventListener(ProgressEvent.SOCKET_DATA, onDataReceived);
+				removeListener();
 				// Store the answer
 				_socket.readBytes(_response);
 				if (BSONEncoder.logBSON) log.debug("MongoDB response complete : "+HelperByteArray.byteArrayToString(_response));
 				// transform the answer in MongoDocumentResponse
 				var reponse:MongoDocumentResponse = new MongoDocumentResponse(_responseLength, _response, _socket);
-				if (MongoDocument.logDocument) log.debug("Calling callback method");
-				log.evt("MongoResponseReader::onDataReceived : Received complete response : "+reponse.toString());
-				if (_callback != null) _callback(reponse);
+				log.evt("onDataReceived : Received complete response : "+reponse.toString());
+				if (MongoDocument.logDocument) log.debug("Calling callback result method of responder (if there is one)");
+				if (_responder != null) _responder.result(reponse);
 				// release the socket
 				_pool.releaseSocket(_socket as TimedSocket);
 			}
@@ -64,6 +69,23 @@ package jmcnet.mongodb.messages
 				if (MongoDocument.logDocument) log.debug("The response is not complete. Received="+(_socket.bytesAvailable+4)+" waitingFor="+_responseLength);
 				// Wait ...
 			}
+		}
+		
+		private function onError(event:Event):void {
+			if (MongoDocument.logDocument) log.evt("onError Receiving database answer socket #"+_socket.id);
+			removeListener();
+			if (MongoDocument.logDocument) log.debug("Calling callback error method of responder (if there is one)");
+			if (_responder != null) _responder.fault(event);
+			// release the socket
+			_pool.releaseSocket(_socket as TimedSocket);
+		}
+		
+		private function removeListener():void {
+			//Stop listening the answer
+			_socket.removeEventListener(ProgressEvent.SOCKET_DATA, onDataReceived);
+			_socket.removeEventListener(IOErrorEvent.IO_ERROR, onError);
+			_socket.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, onError);
+		
 		}
 	}
 }
