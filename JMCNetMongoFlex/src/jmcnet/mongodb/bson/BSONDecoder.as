@@ -14,7 +14,7 @@ package jmcnet.mongodb.bson
 	public class BSONDecoder
 	{
 		public static var logBSON:Boolean = false;
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(BSONDecoder));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(BSONDecoder);
 		
 		
 		private static const INDENT:String="    "; 

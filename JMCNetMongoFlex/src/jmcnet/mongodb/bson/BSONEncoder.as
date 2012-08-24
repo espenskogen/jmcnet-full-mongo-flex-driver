@@ -46,7 +46,7 @@ package jmcnet.mongodb.bson
 		public static const BSON_TRUE: uint=0x01;
 		
 		public static var logBSON:Boolean = false;
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(BSONEncoder));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(BSONEncoder);
 		
 		public static function encodeObjectToBSON(obj:Object):ByteArray {
 			if (logBSON) log.info("Calling encodeObjectToBSON obj="+ObjectUtil.toString(obj));

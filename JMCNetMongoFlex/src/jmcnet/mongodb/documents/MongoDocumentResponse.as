@@ -15,7 +15,7 @@ package jmcnet.mongodb.documents
 	 */
 	public class MongoDocumentResponse
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocumentResponse));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocumentResponse);
 		
 		private var _header:MongoMsgHeader;
 		private var _responseFlags:int;

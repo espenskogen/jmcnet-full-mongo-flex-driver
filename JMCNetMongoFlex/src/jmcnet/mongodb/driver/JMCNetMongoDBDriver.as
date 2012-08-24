@@ -19,6 +19,7 @@ package jmcnet.mongodb.driver
 	import jmcnet.mongodb.documents.Cursor;
 	import jmcnet.mongodb.documents.JavaScriptCode;
 	import jmcnet.mongodb.documents.MongoDocument;
+	import jmcnet.mongodb.documents.MongoDocumentAggregationPipeline;
 	import jmcnet.mongodb.documents.MongoDocumentDelete;
 	import jmcnet.mongodb.documents.MongoDocumentKillCursors;
 	import jmcnet.mongodb.documents.MongoDocumentQuery;
@@ -104,7 +105,7 @@ package jmcnet.mongodb.driver
 		private var _lastErrorDoc:MongoDocument;
 		private var _firstAuthenticationError:Boolean = true;
 		
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(JMCNetMongoDBDriver));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(JMCNetMongoDBDriver);
 		
 		/**
 		 * Build one MongoDB Driver. You must instanciate, one driver per database.
@@ -293,7 +294,7 @@ package jmcnet.mongodb.driver
 		 * @param continueOnError (Boolean) : true if must continue when there is an error. Default value is false.
 		 */
 		public function insertDoc(collectionName:String, documents:Array, safeCallback:Function=null, continueOnError:Boolean=true):void {
-			log.info("Calling JMCNetMongoDBDriver::insert collectionName="+collectionName+" safeCallback="+safeCallback+" continueOnError="+continueOnError+" documents="+ObjectUtil.toString(documents)); 
+			log.info("Calling insertDoc collectionName="+collectionName+" safeCallback="+safeCallback+" continueOnError="+continueOnError+" documents="+ObjectUtil.toString(documents)); 
 			
 			var msg:MongoMsgInsert = new MongoMsgInsert(databaseName, collectionName, continueOnError);
 			for each (var doc:Object in documents) {
@@ -516,7 +517,7 @@ package jmcnet.mongodb.driver
 		 * @param cond (MongoDocument) : a document used to filter documents that will be grouped. Default value is null (all documents are considered),
 		 * @param finalize (JavaScriptCode) : a JS function used to finalize the result. JS signature must be "function(result):void". Default value is null (no finalization).
 		 */
-		public function group(collectionName:String, key:MongoDocument, reduce:JavaScriptCode, initial:MongoDocument, callback:Function, keyf:JavaScriptCode=null, cond:MongoDocument=null, finalize:JavaScriptCode=null):void {
+		public function group(collectionName:String, key:MongoDocument, reduce:JavaScriptCode, initial:MongoDocument, callback:Function=null, keyf:JavaScriptCode=null, cond:MongoDocument=null, finalize:JavaScriptCode=null):void {
 			log.info("Calling JMCNetMongoDBDriver::group collectionName="+collectionName+" key="+key+" reduce="+reduce+" initial="+initial+" callback="+callback+" keyf="+keyf+" cond="+cond+" finalize="+finalize);
 			var grpCmd:MongoDocument= new MongoDocument();
 			if (collectionName != null) grpCmd.addKeyValuePair("ns", collectionName);
@@ -546,7 +547,7 @@ package jmcnet.mongodb.driver
 		 * @param jsMode (Boolean) : if true, all JS is executed in one JS instance. Default value is false,
 		 * @param verbose (Boolean) : if true output all 'print' JS command to the server logs. Default is false.
 		 */
-		public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, callback:Function,
+		public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, callback:Function=null,
 								  query:MongoDocument=null, sort:MongoDocument=null, limit:uint=0, finalize:JavaScriptCode=null,
 								  scope:MongoDocument=null, jsMode:Boolean=false, verbose:Boolean=false):void {
 			log.info("Calling JMCNetMongoDBDriver::mapReduce collectionName="+collectionName+" map="+map+" reduce="+reduce+" out="+out+" callback="+callback+
@@ -569,6 +570,33 @@ package jmcnet.mongodb.driver
 		}
 		
 		/**
+		 * Do aggregation on documents. More on aggregation framework can be found on the MongoDB Documentation.
+		 * @param collectionName (String) : the name of the collection to query from,
+		 * @param pipeline (MongoDocumentAggregationPipeline) : the pipeline of aggregation command. See MongoDocumentAggregationPipeline
+		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * 
+		 */
+		public function aggregate(collectionName:String, pipeline:MongoDocumentAggregationPipeline, callback:Function=null):void {
+			log.info("Calling JMCNetMongoDBDriver::aggregate collectionName="+collectionName+" pipeline="+pipeline+" callback="+callback);
+			// db.runCommand(
+	//			{ aggregate : "article", pipeline : [
+	//				{ $project : {
+	//					author : 1,
+	//					tags : 1,
+	//				} },
+	//				{ $unwind : "$tangs" },
+	//				{ $group : {
+	//					_id : { tags : 1 },
+	//					authors : { $addToSet : "$author" }
+	//				} }
+	//			] }
+			if (pipeline == null) pipeline = new MongoDocumentAggregationPipeline();
+			var cmd:MongoDocument = new MongoDocument("aggregate", collectionName).addKeyValuePair("pipeline", null /* pipeline.tabPipelineOperators*/);
+			runCommand(cmd, callback);
+		}
+
+		
+		/**
 		 * Called when a socket is available in the pool
 		 */
 		private function onFreeSocket(event:EventSocketPool):void {
@@ -587,6 +615,7 @@ package jmcnet.mongodb.driver
 			// if no more socket -> repush the message
 			if (socket == null) {
 				log.warn("There is no more socket in onFreeSocket... Curious.");
+				_awaitingMessages.push(msg);
 				return ;
 			}
 			

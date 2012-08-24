@@ -10,6 +10,7 @@ package jmcnet.mongodb.documents
 	import jmcnet.mongodb.bson.BSONEncoder;
 	import jmcnet.mongodb.errors.ExceptionJMCNetMongoDB;
 	
+	import mx.collections.ArrayCollection;
 	import mx.utils.ObjectUtil;
 
 	/**
@@ -18,7 +19,7 @@ package jmcnet.mongodb.documents
 	public class MongoDocument implements MongoDocumentInterface
 	{
 		public static var logDocument:Boolean=false; 
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocument));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocument);
 		
 		private var _table:HashTable = new HashTable();
 		
@@ -27,25 +28,40 @@ package jmcnet.mongodb.documents
 				addKeyValuePair(key, value);
 		}
 		
+		/**
+		 * Add a key value pair to the MongoDocument object.
+		 * @param key String The key used to name the value
+		 * @param value Object The object to store in the MongoDocument. Type possible for value is Number, String, Date, Boolean, MongoDocumentInterface, Array or ArrayCollection. 
+		 * @return this
+		 */
 		public function addKeyValuePair(key:String, value:Object):MongoDocument {
-			if (logDocument) log.debug("MongoDocument::addKeyValuePair key="+key+" value="+value);
-			if (value != null) {
-				// value can only be String, Number, Boolean, uint, int or Date
-				if (! value is Number &&
-					! value is String &&
-					! value is Date &&
-					! value is Boolean &&
-					! value is MongoDocumentInterface) {
-					var errMsg:String="document value can only be one of Number, String, Date, Boolean and MongoDocument";
-					log.error(errMsg);
-					throw new ExceptionJMCNetMongoDB(errMsg);
-				}
+			if (logDocument) log.debug("addKeyValuePair key="+key+" value="+value);
+//			if (value != null) {
+//				// value can only be String, Number, Boolean, uint, int or Date
+//				if (! (value is Number) &&
+//					! (value is String) &&
+//					! (value is Date) &&
+//					! (value is Boolean) &&
+//					! (value is MongoDocumentInterface) &&
+//					! (value is Array) &&
+//					! (value is ArrayCollection)) {
+//					var errMsg:String="document value can only be one of Number, String, Date, Boolean, MongoDocumentInterface, Array or ArrayCollection";
+//					log.error(errMsg);
+//					throw new ExceptionJMCNetMongoDB(errMsg);
+//				}
+//			}
+			if (value != null && value is ArrayCollection) {
+				if (logDocument) log.debug("value is ArrayCollection");
+				_table.addItem(key, (value as ArrayCollection).toArray());
 			}
-			_table.addItem(key, value);
+			else {
+				if (logDocument) log.debug("value is not an ArrayCollection");
+				_table.addItem(key, value);
+			}
 			
 			return this;
 		}
-			
+		
 		public function getKeys():Array {
 			return _table.getAllKeys();
 		}
@@ -83,7 +99,7 @@ package jmcnet.mongodb.documents
 		}
 		
 		/**
-		 * Transform a generic MongoDocument in an object wich classname is given
+		 * Transform a generic MongoDocument in an object which classname is given
 		 */
 		public function toObject(destClass:Class):* {
 			log.info("Converting MongoDocument to object class :'"+destClass);
@@ -184,6 +200,100 @@ package jmcnet.mongodb.documents
 			}
 			
 			if (logDocument) log.debug("End of populateObjectFromArray");
+			return obj;
+		}
+		
+		/**
+		 * Transform a genreic MongoDocument in an generic object composed uniquely of ArrayCollection and Object
+		 * @return an Object containing ArrayCollection for arrays or Object or any combinsaison of the both
+		 */
+		public function toGenericObject():Object {
+			log.info("Converting MongoDocument to generic object composed of ArrayCollection and Object");
+			return populateGenericObjectFromObject(this);
+		}
+		
+		/**
+		 * Populate one Object from values stored in a HashTable.
+		 * @return an ArrayCollection for arrays or Object or any combinaison of both
+		 */
+		private function populateGenericObjectFromObject(source:Object):Object {
+			if (logDocument) log.debug("Calling populateObjectFromGenericObject source="+source);
+			var ret:Object;
+			
+			if (source is String ||
+				source is Number ||
+				source is Date   ||
+				source is Boolean ||
+				source is ObjectID ||
+				source == null) {
+				if (logDocument) log.debug("End of populateObjectFromObject ret="+source);
+				return source;
+			}
+			else if (source is MongoDocument) {
+				ret = populateGenericObjectFromHashTable((source as MongoDocument).table);
+			}
+			else if (source is HashTable) {
+				ret = populateGenericObjectFromHashTable(source as HashTable);
+			}
+			else if (source is Array) {
+				ret = populateGenericObjectFromArray(source as Array);
+			}
+				// Other objects are returned as is
+			else if (source is Object) {
+				ret = source;
+			}
+			else {
+				var msgErr:String="Object type '"+getQualifiedClassName(source)+"' not implemented in MongoDocument to Object convertion.";
+				log.error(msgErr);
+				throw new ExceptionJMCNetMongoDB(msgErr);
+			}
+			
+			if (logDocument) log.debug("End of populateObjectFromObject ret="+ObjectUtil.toString(ret));
+			return ret;
+		}
+		
+		/**
+		 * Populate one Object from values stored in a HashTable.
+		 * @param destinationClass : the class of the expected object
+		 */
+		private function populateGenericObjectFromHashTable(source:HashTable):Object {
+			if (logDocument) log.debug("Calling populateGenericObjectFromHashTable source="+source);
+			var obj:Object = new Object();
+			// looking for all attributes
+			var attributes:HashTable = source;
+			// valuate all attributes
+			for each (var attributeName:String in attributes.getAllKeys()) {
+				var item:Object = source.getItem(attributeName);
+				var itemClassName:String = getQualifiedClassName(item);
+				var destClassName:String = obj is MongoDocument ? "Object":HelperClass.getClassNameOfAttribute(obj,attributeName);
+				if (itemClassName == "Array") {
+					destClassName = HelperClass.getArrayElementTypeOfArray(obj, attributeName);
+					if (destClassName == null || destClassName == "") {
+						destClassName="Object";
+					}
+					if (logDocument) log.debug("Array element type is : "+destClassName);
+				}
+				if (logDocument) log.debug("Populating attribute : "+attributeName+" value="+item+" className="+itemClassName+" destClassName="+destClassName);
+				obj[attributeName] = populateGenericObjectFromObject(item);
+			}
+			
+			if (logDocument) log.debug("End of populateObjectFromHashTable ret="+ObjectUtil.toString(obj));
+			return obj;
+		}
+		
+		/**
+		 * Populate one Array from values stored in a HashTable.
+		 * @param destinationClass : the class of the expected object
+		 */
+		private function populateGenericObjectFromArray(source:Array):Object {
+			if (logDocument) log.debug("Calling populateGenericObjectFromArray source="+source);
+			var obj:ArrayCollection = new ArrayCollection();
+			// store all elements in a 
+			for each (var value:Object in source) {
+				obj.addItem(populateGenericObjectFromObject(value));
+			}
+			
+			if (logDocument) log.debug("End of populateGenericObjectFromArray");
 			return obj;
 		}
 		
