@@ -174,7 +174,59 @@ driver.queryDoc("collection", query, onResponseReceivedCallback, new MongoDocume
 }}}
 
 == New in 1.5 - Responder and Token capabilities ==
+With 1.5 release of the driver you can now be given a token in driver's call and get this token back in the response callback.
+So, you are now able to share objects between call and response without having globals variables.
 
+Here is an complete example :
+{{{
+// Prior to 1.5 version :
+mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+
+public function onResponseReceived(response:MongoDocumentResponse):void 
+// check the response
+}
+
+// After 1.5 version :
+var token:AnyClassUsedToPassInformations = ...;
+var responder:MongoResponder(onResponseReceived, onErrorCallback, token);
+
+mongoDriver.queryDoc("documentsCollectionName", query, responder);
+
+public function onResponseReceived(response:MongoDocumentResponse, token:*):void 
+// check the response
+...
+// use the token passed in the queryDoc call
+token.xxx ;
+}
+
+// You now have a errorCallback for this query call only
+public function onErrorCallback(event:Event, token:*):void {
+// the error is stored as an Event
+...
+// use the token passed in the queryDoc call
+token.xxx ;
+}}}
+
+=== Portability notes <1.5 -> 1.5 ===
+You just need to transform this call :
+{{{
+mongoDriver.driverMethod("documentsCollectionName", ..., onCallback);
+}}}
+on this (add new MongoResponder around the callback name) :
+{{{
+mongoDriver.driverMethod("documentsCollectionName", ..., new MongoResponder(onCallback));
+}}}
+
+and add a token parameter to all callbacks.
+Change this :
+{{{
+public function onCallback(response:MongoDocumentResponse):void 
+}}}
+on this (add token:*) :
+{{{
+public function onCallback(response:MongoDocumentResponse, token:*):void 
+}}}
+Changes are not so hard to do...
 
 = See also =
   * [Home],
