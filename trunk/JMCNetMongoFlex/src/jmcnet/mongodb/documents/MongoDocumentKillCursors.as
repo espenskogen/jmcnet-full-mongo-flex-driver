@@ -11,7 +11,7 @@ package jmcnet.mongodb.documents
 
 	public class MongoDocumentKillCursors
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocumentKillCursors));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocumentKillCursors);
 		
 		private var _lstCursorsID:Array = new Array();
 		

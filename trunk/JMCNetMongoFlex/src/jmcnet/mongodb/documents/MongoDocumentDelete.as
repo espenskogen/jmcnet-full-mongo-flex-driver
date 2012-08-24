@@ -11,7 +11,7 @@ package jmcnet.mongodb.documents
 
 	public class MongoDocumentDelete
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocumentDelete));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocumentDelete);
 		
 		private var _selector:MongoDocument = null;
 		

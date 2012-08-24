@@ -11,7 +11,7 @@ package jmcnet.mongodb.documents
 
 	public class MongoDocumentUpdate
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocumentUpdate));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocumentUpdate);
 		
 		private var _update:MongoDocument = null;
 		private var _selector:MongoDocument = null;

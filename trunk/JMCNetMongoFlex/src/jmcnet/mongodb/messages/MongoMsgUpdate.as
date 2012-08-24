@@ -9,11 +9,11 @@ package jmcnet.mongodb.messages
 	import jmcnet.mongodb.documents.MongoDocumentUpdate;
 
 	/**
-	 * A generic Query message command.
+	 * A generic Update message command.
 	 */
 	public class MongoMsgUpdate extends MongoMsgAbstract
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoMsgUpdate));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoMsgUpdate);
 		
 		private var _update:MongoDocumentUpdate=null;
 		private var _flags:uint=0;

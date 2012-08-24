@@ -11,7 +11,7 @@ package jmcnet.mongodb.documents
 
 	public class MongoDocumentQuery
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDocumentQuery));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocumentQuery);
 		
 		private var _query:MongoDocument = null;
 		private var _orderBy:MongoDocument = null;
@@ -61,12 +61,6 @@ package jmcnet.mongodb.documents
 			}
 			
 			ba.writeBytes(BSONEncoder.bsonWriteDocument(g));
-			
-//			ba.writeBytes(BSONEncoder.bsonWriteDocument(_query.table));
-//			
-//			if (_orderBy != null) {
-//				ba.writeBytes(BSONEncoder.bsonWriteDocument(_orderBy.table, null));
-//			}
 			
 			if (BSONEncoder.logBSON) log.debug("MongoDocumentQuery::toBSON bson="+HelperByteArray.byteArrayToString(ba));
 			return ba;
