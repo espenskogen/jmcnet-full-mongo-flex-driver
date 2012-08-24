@@ -1,9 +1,5 @@
 package modele
 {
-	import as3.mongo.db.document.Document;
-	
-	import flash.utils.getQualifiedClassName;
-	
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	
 	import mx.utils.ObjectUtil;
@@ -18,7 +14,7 @@ package modele
 		
 		public function MonVO()	{}
 		
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MonVO));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MonVO);
 		
 		public static function extractFromDocument(monVo:MonVO, doc:Object):MonVO	{
 			log.debug("Appel extractFromDocument : vo="+ObjectUtil.toString(monVo)+" doc="+doc);

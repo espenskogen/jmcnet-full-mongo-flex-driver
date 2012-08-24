@@ -23,18 +23,23 @@ package junit
 	import jmcnet.mongodb.documents.ObjectID;
 	import jmcnet.mongodb.driver.EventMongoDB;
 	import jmcnet.mongodb.driver.JMCNetMongoDBDriver;
+	import jmcnet.mongodb.driver.MongoResponder;
 	import jmcnet.mongodb.errors.ExceptionJMCNetMongoDB;
 	import jmcnet.mongodb.messages.MongoMsgHeader;
 	import jmcnet.mongodb.messages.MongoMsgInsert;
 	import jmcnet.mongodb.messages.MongoMsgQuery;
 	import jmcnet.mongodb.messages.MongoMsgUpdate;
 	
+	import mx.collections.ArrayCollection;
+	import mx.containers.Accordion;
+	
+	import org.flexunit.asserts.assertNotNull;
 	import org.flexunit.asserts.fail;
 	import org.flexunit.async.Async;
 	
 	public class MongoDriverTest
 	{		
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoDriverTest));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDriverTest);
 		
 		/** For this test to be ok, you must have a mongodb server in auth mode with a database named "testDatabase" and a user name "testu" with password "testu"
 		 *  The command to create this are the following :
@@ -49,7 +54,11 @@ package junit
 		private static var PASSWORD:String="testu";
 		private static var SERVER:String="jmcsrv2";
 		private static var PORT:uint=27017;
-
+		
+		// Store this object in a MongoDB instance
+		private var driver:JMCNetMongoDBDriver = new JMCNetMongoDBDriver();
+				
+		private static var cleanUpAfterTest:Boolean=true;
 		
 		[Before]
 		public function setUp():void {
@@ -60,11 +69,15 @@ package junit
 		[After]
 		public function tearDown():void
 		{
+			log.info("Calling tearDown");
 			if (driver.isConnecte()) {
-				// clean up -> delete object
-				driver.dropCollection("testu");
-				driver.disconnect();
+				if (cleanUpAfterTest) {
+					// clean up -> delete object
+					 driver.dropCollection("testu");
+				}
+				 driver.disconnect();
 			}
+			log.info("End of tearDown");
 		}
 		
 		[BeforeClass]
@@ -471,8 +484,6 @@ package junit
 			Assert.assertFalse(vo.arrayTestvo[1].attrBoolean);			
 		}
 		
-		// Store this object in a MongoDB instance
-		private var driver:JMCNetMongoDBDriver = new JMCNetMongoDBDriver();
 		private var obj:TestComplexObjectIDVO;
 		
 		[Test(async, timeout=5000)]
@@ -692,7 +703,7 @@ package junit
 			var query:MongoDocumentQuery=new MongoDocumentQuery();
 			query.addOrderByCriteria("attrInt32", true);
 			// Ask for "attrString" attribute only
-			driver.queryDoc("testu", query, onResponseReceivedOrderByReturnFields, new MongoDocument("attrString", 1));
+			driver.queryDoc("testu", query, new MongoResponder(onResponseReceivedOrderByReturnFields), new MongoDocument("attrString", 1));
 		}
 		
 		public function onResponseReceivedOrderByReturnFields(rep:MongoDocumentResponse):void {
@@ -735,6 +746,180 @@ package junit
 		
 		private function onAuthError(event:EventMongoDB, ... args):void {
 			log.debug("Received an expected EVT_AUTH_ERROR");
+		}
+		
+		[Test(async, timeout=5000)]
+		public function testArrayCollection():void {
+			log.debug("Calling testArrayCollection");
+			driver.databaseName = DATABASENAME;
+			driver.hostname = SERVER;
+			driver.port = PORT;
+			driver.username = USERNAME;
+			driver.password = PASSWORD;
+			driver.socketPoolMax = 2;
+			driver.socketPoolMin = 2;
+			driver.setWriteConcern(JMCNetMongoDBDriver.SAFE_MODE_NORMAL);
+			Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_CONNECTOK, onConnectArrayCollection, 1000);
+			driver.connect();
+			log.debug("EndOf testArrayCollection");
+		}
+		
+		private var array:ArrayCollection = new ArrayCollection([
+			{ attr1:"value1", attr2:12, attr3:true},
+			{ attr1:"value2", attr2:13, attr3:false}
+		]);
+		
+		public function onConnectArrayCollection(event:EventMongoDB, ... args):void {
+			log.debug("Calling onConnectArrayCollection");
+			
+			// We are connected, so write the doc composed of an ArrayCollection
+			var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
+			driver.insertDoc("testu", [doc]);
+			
+			// Wait a sec
+			var t:Timer = new Timer(1000, 1);
+			log.debug("starting timer to wait for insert");
+			t.start();
+			Async.handleEvent(this, t, TimerEvent.TIMER, onTimerArrayCollection, 2000);
+			log.debug("EndOf onConnectArrayCollection");
+		}
+		
+		private var token:String="MyTokenString";
+		public function onTimerArrayCollection(event:TimerEvent, ... args):void {
+			log.debug("Calling onTimerArrayCollection");
+			// Find the doc
+			var query:MongoDocumentQuery=new MongoDocumentQuery();
+			// Ask for all object in collections
+			driver.queryDoc("testu", query, new MongoResponder(onResponseReceivedArrayCollection, null, token));
+			
+			// Wait a sec
+			var t:Timer = new Timer(1000, 1);
+			log.debug("starting timer to wait for query result");
+			t.start();
+			Async.handleEvent(this, t, TimerEvent.TIMER, voidFunction, 2000);
+			
+			log.debug("EndOf onTimerArrayCollection");
+		}
+		
+		public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse, token:*):void {
+			log.debug("Calling onResponseReceivedArrayCollection responseDoc="+rep+" token="+token);
+			
+			Assert.assertEquals(1, rep.documents.length);
+			Assert.assertEquals("MyTokenString", token as String);
+			
+			log.debug("Received doc[0] : "+rep.documents[0].toString());
+			var vo1:MongoDocument = rep.documents[0] as MongoDocument;
+			Assert.assertNotNull(vo1.getValue("_id"));
+			Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
+			
+			// Try to convert the arrayCollectionName into an Array
+			// var array:Array = vo1.toObject(Array); // this cannot work because returned doc is not an Array
+			Assert.assertTrue(vo1.getValue("arrayCollectionName") is Array);
+			var array:Array = vo1.getValue("arrayCollectionName") as Array;
+			Assert.assertNotNull(array);
+			Assert.assertEquals(2, array.length);
+			
+			// Verify 1rst object returned
+			Assert.assertEquals("value1", (array[0] as MongoDocument).getValue("attr1"));
+			Assert.assertEquals(12, (array[0] as MongoDocument).getValue("attr2"));
+			Assert.assertEquals(true, (array[0] as MongoDocument).getValue("attr3"));
+			
+			// Verify 2nd object returned
+			Assert.assertEquals("value2", (array[1] as MongoDocument).getValue("attr1"));
+			Assert.assertEquals(13, (array[1] as MongoDocument).getValue("attr2"));
+			Assert.assertEquals(false, (array[1] as MongoDocument).getValue("attr3"));
+			
+			// Try to convert in a ArrayCollection
+			var arrayCol:ArrayCollection = new ArrayCollection(array);
+			Assert.assertEquals(2, arrayCol.length);
+			
+			// Verify 1rst object returned
+			Assert.assertEquals("value1", (arrayCol[0] as MongoDocument).getValue("attr1"));
+			Assert.assertEquals(12, (arrayCol[0] as MongoDocument).getValue("attr2"));
+			Assert.assertEquals(true, (arrayCol[0] as MongoDocument).getValue("attr3"));
+			
+			// Verify 2nd object returned
+			Assert.assertEquals("value2", (arrayCol[1] as MongoDocument).getValue("attr1"));
+			Assert.assertEquals(13, (arrayCol[1] as MongoDocument).getValue("attr2"));
+			Assert.assertEquals(false, (arrayCol[1] as MongoDocument).getValue("attr3"));
+			
+			// 3rd test -> convert into generic object
+			log.debug("Converting into generic object");
+			var obj1:Object = (arrayCol[0] as MongoDocument).toObject(Object);
+			Assert.assertEquals("value1", obj1.attr1);
+			Assert.assertEquals(12, obj1.attr2);
+			Assert.assertEquals(true, obj1.attr3);
+			
+			var obj2:Object = (arrayCol[1] as MongoDocument).toObject(Object);
+			Assert.assertEquals("value2", obj2.attr1);
+			Assert.assertEquals(13, obj2.attr2);
+			Assert.assertEquals(false, obj2.attr3);
+			
+			// Convert by using toGenericObject
+			var genericObject:Object = vo1.toGenericObject();
+			Assert.assertTrue(genericObject.arrayCollectionName is ArrayCollection);
+			Assert.assertTrue(genericObject._id is ObjectID);
+			var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
+			log.debug("Generic ArrayCollection is :"+arrayCol1.toString()); 
+			Assert.assertNotNull(arrayCol1);
+			Assert.assertEquals(2, arrayCol1.length);
+			
+			// Verify 1rst object returned
+			Assert.assertEquals("value1", arrayCol1[0].attr1);
+			Assert.assertEquals(12, arrayCol1[0].attr2);
+			Assert.assertEquals(true, arrayCol1[0].attr3);
+			
+			// Verify 2nd object returned
+			Assert.assertEquals("value2", arrayCol1[1].attr1);
+			Assert.assertEquals(13, arrayCol1[1].attr2);
+			Assert.assertEquals(false, arrayCol1[1].attr3);
+			
+			log.debug("EndOf onResponseReceivedArrayCollection");
+		}
+		
+		public function voidFunction(event:TimerEvent, ... args):void {
+			log.debug("Calling voidFunction");
+			log.debug("EndOf voidFunction");
+		}
+		
+		[Test]
+		public function testToGenericObject():void {
+			log.debug("Calling testToGenericObject");
+			MongoDocument.logDocument = true;
+			var m:MongoDocument = new MongoDocument();
+			m.addKeyValuePair("a1",new String("string1"));
+			var d:Date = new Date();
+			m.addKeyValuePair("a2",d);
+			m.addKeyValuePair("a3",new Number(12));
+			m.addKeyValuePair("a4",new Boolean(true));
+			m.addKeyValuePair("a5",new MongoDocument().addKeyValuePair("k", "value").addKeyValuePair("l",15.9));
+			m.addKeyValuePair("a6", ["string1", "string2"]);
+			m.addKeyValuePair("a7", array);
+			m.addKeyValuePair("a8", new Accordion());
+			
+			// Some verifications
+			var obj:Object = m.toGenericObject();
+			Assert.assertEquals("string1", obj.a1);
+			Assert.assertEquals(d, obj.a2);
+			Assert.assertEquals(12, obj.a3);
+			Assert.assertEquals(true, obj.a4);
+			
+			Assert.assertEquals("value", obj.a5.k);
+			Assert.assertEquals(15.9, obj.a5.l);
+			
+			Assert.assertEquals("string1", obj.a6[0]);
+			Assert.assertEquals("string2", obj.a6[1]);
+			
+			Assert.assertEquals("value1", obj.a7[0].attr1);
+			Assert.assertEquals(12, obj.a7[0].attr2);
+			Assert.assertEquals(true, obj.a7[0].attr3);
+			Assert.assertEquals("value2", obj.a7[1].attr1);
+			Assert.assertEquals(13, obj.a7[1].attr2);
+			Assert.assertEquals(false, obj.a7[1].attr3);
+			
+			assertNotNull(obj.a8);
+			
+			log.debug("EndOf testToGenericObject");
 		}
 	}
 }

@@ -27,6 +27,7 @@
 			import jmcnet.mongodb.documents.ObjectID;
 			import jmcnet.mongodb.driver.EventMongoDB;
 			import jmcnet.mongodb.driver.JMCNetMongoDBDriver;
+			import jmcnet.mongodb.driver.MongoResponder;
 			
 			import modele.TestObjectIDVO;
 			import modele.TestVO;
@@ -119,12 +120,12 @@
 			protected function onLastError(event:EventMongoDB):void {
 				log.evt("Reception of getLastError result"); 
 				if (event.result != null) {
-					onLastErrorCallback(event.result as MongoDocumentResponse);
+					onLastErrorCallback(event.result as MongoDocumentResponse, null);
 				}
 			}
 			
-			protected function onLastErrorCallback(response:MongoDocumentResponse):void {
-				log.evt("In onLastErrorCallback result : "+response.toString()); 
+			protected function onLastErrorCallback(response:MongoDocumentResponse, token:*):void {
+				log.evt("In onLastErrorCallback result : "+response.toString()+" token="+token); 
 				if (response.numberReturned == 1) {
 					if (! response.getDocument(0).getValue("err")) {
 						console.text += "\nonLastError : Résultat OK. Message="+response.toString();
@@ -149,11 +150,12 @@
 				obj.attr1 = 1;
 				obj.attrInt32=22;
 				obj._id = null;
-				mongoDriver.insertDoc(Constantes.documentsCollectionName, [obj], onLastErrorCallback, true);
-				mongoDriver.insertDoc(Constantes.documentsCollectionName, ["une chaine simple"], onLastErrorCallback, true);
-				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new Array("1ere chaine", "2eme chaine")], onLastErrorCallback, true);
-				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO()], onLastErrorCallback, true);
-				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO(ObjectID.createFromString("myObjectIDString"))], onLastErrorCallback, true);
+				var responder:MongoResponder = new MongoResponder(onLastErrorCallback, null, null);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, [obj], responder, true);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, ["une chaine simple"], responder, true);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new Array("1ere chaine", "2eme chaine")], responder, true);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO()], responder, true);
+				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new TestObjectIDVO(ObjectID.createFromString("myObjectIDString"))], responder, true);
 				mongoDriver.insertDoc(Constantes.documentsCollectionName, [new MongoDocument("key", "value")]);
 			}
 			
@@ -161,17 +163,17 @@
 			{
 				trace("Dans creerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nCréation de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.createCollection(Constantes.documentsCollectionName, checkLastErrorCallback);
+				mongoDriver.createCollection(Constantes.documentsCollectionName, new MongoResponder(checkLastErrorCallback));
 			}
 			
 			protected function renameCollectionClickHandler(event:MouseEvent):void
 			{
 				trace("Dans renameCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nRename of collection '"+Constantes.documentsCollectionName+"' to newCollectionName (only works with the admin db) ...";
-				mongoDriver.renameCollection(Constantes.documentsCollectionName, "newCollectionName", checkLastErrorCallback);
+				mongoDriver.renameCollection(Constantes.documentsCollectionName, "newCollectionName",  new MongoResponder(checkLastErrorCallback));
 			}
 			
-			protected function checkLastErrorCallback(responseDoc:MongoDocumentResponse):void {
+			protected function checkLastErrorCallback(responseDoc:MongoDocumentResponse, token:*):void {
 				if (responseDoc != null) {
 					if (responseDoc.numberReturned > 0) {
 						if (responseDoc.getDocument(0).getValue("ok")) {
@@ -189,7 +191,7 @@
 			{
 				log.evt("Dans supprimerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nSuppression de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.dropCollection(Constantes.documentsCollectionName, checkLastErrorCallback);
+				mongoDriver.dropCollection(Constantes.documentsCollectionName, new MongoResponder(checkLastErrorCallback));
 			}
 			
 			protected function lister_clickHandler(event:MouseEvent):void
@@ -199,7 +201,7 @@
 				
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				var returnFields:MongoDocument = null;
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived, returnFields, 0, 10 );				
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived), returnFields, 0, 10 );				
 			}
 			
 			protected function listerOrderBy_clickHandler(event:MouseEvent):void
@@ -209,10 +211,10 @@
 				
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				query.addOrderByCriteria("attrInt32", true);
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived);				
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived));				
 			}
 						
-			private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+			private function onResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
 				log.evt("Reception of a response : "+responseDoc.toString());
 				console.text += "\nThe response : \n";
 				console.text += "\n    responseTo="+responseDoc.header.responseTo;
@@ -233,7 +235,7 @@
 				log.evt("Dans getMoreClickHandler");
 				console.text += "\n------------------------------------------------------\nMore data of collection '"+Constantes.documentsCollectionName+"' ...";
 				
-				mongoDriver.getMoreDoc(Constantes.documentsCollectionName, cursorID, onResponseReceived, 10);		
+				mongoDriver.getMoreDoc(Constantes.documentsCollectionName, cursorID, new MongoResponder(onResponseReceived), 10);		
 			}
 			
 			protected function update_clickHandler(event:MouseEvent):void
@@ -243,7 +245,7 @@
 				
 				var doc:MongoDocumentUpdate = new MongoDocumentUpdate();
 				doc.addUpdateCriteria("$set", new MongoDocument("root.attrString", "newValue"));
-				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false, true);
+				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, new MongoResponder(onLastErrorCallback), false, true);
 				
 				log.debug("In update_clickHandler (root.attrInt32=256 where attrInt32=18, multiUpdate=false)");
 				console.text += "\n------------------------------------------------------\nUpdate collection '"+Constantes.documentsCollectionName+"' (root.attrInt32=256 where attrInt32=18, multiUpdate=false) ...";
@@ -251,7 +253,7 @@
 				doc = new MongoDocumentUpdate();
 				doc.addUpdateCriteria("root.attrInt32", 256);
 				doc.addSelectorCriteria("attrInt32", 18);
-				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false, false);				
+				mongoDriver.updateDoc(Constantes.documentsCollectionName, doc, new MongoResponder(onLastErrorCallback), false, false);				
 			}
 			
 			protected function delete_clickHandler(event:MouseEvent):void
@@ -262,13 +264,13 @@
 				var doc:MongoDocumentDelete = new MongoDocumentDelete();
 				doc.addSelectorCriteria("attrString", "newValue");
 				log.debug("First delete in delete_clickHandler");
-				mongoDriver.deleteDoc(Constantes.documentsCollectionName, doc, onLastErrorCallback, false);
+				mongoDriver.deleteDoc(Constantes.documentsCollectionName, doc, new MongoResponder(onLastErrorCallback), false);
 				
 				// 2nd way to initialize MongoDocumentDelete ICI 2 delete de suite ca fait planter la socket qui est decalee
 				log.debug("2nd delete in delete_clickHandler");
 				mongoDriver.deleteDoc(Constantes.documentsCollectionName,
 					new MongoDocumentDelete(MongoDocument.or(new MongoDocument("attrString", "newValue"), new MongoDocument("attrString", "otherValue"))),
-					onLastErrorCallback, true);
+					new MongoResponder(onLastErrorCallback), true);
 			}
 			
 			protected function killCursor_clickHandler(event:MouseEvent):void
@@ -278,7 +280,7 @@
 				
 				var doc:MongoDocumentKillCursors = new MongoDocumentKillCursors();
 				doc.addCursorID(cursorID);
-				mongoDriver.killCursors(doc, onLastErrorCallback);
+				mongoDriver.killCursors(doc, new MongoResponder(onLastErrorCallback));
 			}
 			
 			protected function complex_find1_clickHandler(event:MouseEvent):void
@@ -287,7 +289,7 @@
 				console.text += "\n------------------------------------------------------\nComplex find collection '"+Constantes.documentsCollectionName+"' (attrInt32 >= 19 && attrInt32 < 22) ...";
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				query.addQueryCriteria("attrInt32", MongoDocument.gte(19).lt(22));
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function complex_find2_clickHandler(event:MouseEvent):void
@@ -296,7 +298,7 @@
 				console.text += "\n------------------------------------------------------\nComplex find collection '"+Constantes.documentsCollectionName+"' (attrArray contains all \"arrayStringValue\", false) ...";
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				query.addQueryCriteria("attrArray", MongoDocument.all(new Array("arrayStringValue", false)));
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function complex_find3_clickHandler(event:MouseEvent):void {
@@ -307,7 +309,7 @@
 					MongoDocument.or(
 						new MongoDocument("attrInt32", 18),
 						new MongoDocument("attr1", 1)));
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function complex_find4_clickHandler(event:MouseEvent):void {
@@ -315,7 +317,7 @@
 				console.text += "\n------------------------------------------------------\nComplex find collection '"+Constantes.documentsCollectionName+"' ( attrString = ^String.*[12]$) ...";
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				query.addQueryCriteria("attrString", MongoDocument.regex("^string.*[12]$",true, false, false, false));
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function complex_find5_clickHandler(event:MouseEvent):void {
@@ -323,20 +325,20 @@
 				console.text += "\n------------------------------------------------------\nComplex find collection '"+Constantes.documentsCollectionName+"' ( ! attrInt32 % 2 == 1 and attrInt32 exists) ...";
 				var query:MongoDocumentQuery = new MongoDocumentQuery();
 				query.addQueryCriteria("attrInt32", MongoDocument.not(MongoDocument.mod(2, 1)).exists(true));
-				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+				mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function aggregation_count_clickHandler(event:MouseEvent):void {
 				log.debug("In aggregation_count_clickHandler");
 				console.text += "\n------------------------------------------------------\nAggregation count collection '"+Constantes.documentsCollectionName+"' ( attrString = ^String.*[12]$) skip=1, limit=250, snapshot=true, ...";
 				var query:MongoDocument = new MongoDocument("attrString", MongoDocument.regex("^string.*[12]$",true, false, false, false));
-				mongoDriver.count(Constantes.documentsCollectionName, query, onResponseReceived,1,250,true); 
+				mongoDriver.count(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived),1,250,true); 
 			}
 			
 			protected function aggregation_distinct_clickHandler(event:MouseEvent):void	{
 				log.debug("In aggregation_distinct_clickHandler");
 				console.text += "\n------------------------------------------------------\nAggregation distinct collection '"+Constantes.documentsCollectionName+"' ( attrString) ...";
-				mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", null, onResponseReceived); 
+				mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", null, new MongoResponder(onResponseReceived)); 
 			}
 			
 			protected function aggregation_group_clickHandler(event:MouseEvent):void {
@@ -347,7 +349,7 @@
 					/* new MongoDocument("attrString", 1) */ null,
 					new JavaScriptCode("function(obj, result) { result.count += obj.attrInt32; result.nb++; }"),
 					new MongoDocument("count", 0).addKeyValuePair("nb",0).addKeyValuePair("avg", 0),
-					onResponseReceived,
+					new MongoResponder(onResponseReceived),
 					new JavaScriptCode("function(doc) { return { \"attrString\" : doc.attrString }; }"),
 					new MongoDocument("attrString", MongoDocument.exists(true)).addKeyValuePair("attrInt32", MongoDocument.exists(true)),
 					new JavaScriptCode("function(result) { if (result.nb > 0) result.avg = result.count/result.nb; }")); 
@@ -394,7 +396,7 @@
 					/* map */    new JavaScriptCode(popup.mapTextArea.text),
 					/* reduce */ new JavaScriptCode(popup.reduceTextArea.text),
 					/* out */ new MongoDocument("inline", 1),
-					onResponseReceived,
+					new MongoResponder(onResponseReceived),
 					/* query */ new MongoDocument("attrString", MongoDocument.exists(true)).addKeyValuePair("attrInt32", MongoDocument.exists(true)),
 					/* sort */ null,
 					/* limit */ 0,
@@ -416,11 +418,11 @@
 				nbResp=0;
 				for (var i:int=0; i < 50 ; i++) {
 					console.text += "Sending command #"+i+". ";
-					mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onShortResponseReceived, returnFields, 0, 10 );
+					mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onShortResponseReceived), returnFields, 0, 10 );
 				}
 			}
 			
-			private function onShortResponseReceived(responseDoc:MongoDocumentResponse):void {
+			private function onShortResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
 				log.evt("Reception of a short response : "+responseDoc.toString());
 				console.text += "Here is response #"+nbResp+". ";
 				nbResp++;
