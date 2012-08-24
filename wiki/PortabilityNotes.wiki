@@ -24,7 +24,7 @@ Change this :
 {{{
 public function onCallback(response:MongoDocumentResponse):void 
 }}}
-on this (add token:*) :
+on this (add token:!*) :
 {{{
 public function onCallback(response:MongoDocumentResponse, token:*):void 
 }}}
