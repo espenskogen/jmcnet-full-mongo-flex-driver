@@ -54,6 +54,24 @@ mongoDriver.insertDoc("documentsCollectionName", [new TestObjectIDVO(ObjectID.cr
 
 // Insert a MongoDocument object
 mongoDriver.insertDoc(Constantes.documentsCollectionName, [new MongoDocument("key", "value")]);
+
+// Insert a generic object
+private var doc1:Object = {
+	title : "this is my first title" ,
+	author : "bob" ,
+	posted : d1,
+	pageViews : 5 ,
+	tags : [ "fun" , "good" , "fun" ] ,
+	comments : [
+		{ author :"joe" , text : "this is cool" } ,
+		{ author :"sam" , text : "this is bad" }
+	],
+	other : { foo : 5 }
+};
+private var doc2:Object = {...};
+private var doc3:Object = {...};
+driver.insertDoc("testu", [doc1, doc2, doc3]);
+
 }}}
 
 == Retrieving documents from a collection ==
