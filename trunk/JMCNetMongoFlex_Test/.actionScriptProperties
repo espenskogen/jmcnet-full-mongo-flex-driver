@@ -20,6 +20,7 @@
     <sourceAttachmentPath/>
   </compiler>
   <applications>
+    <application path="FlexUnitCompilerApplication.mxml"/>
     <application path="FlexUnitApplication.mxml"/>
   </applications>
   <modules/>
