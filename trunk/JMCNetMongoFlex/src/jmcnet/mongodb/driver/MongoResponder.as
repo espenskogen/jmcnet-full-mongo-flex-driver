@@ -4,6 +4,8 @@ package jmcnet.mongodb.driver
 	
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	import jmcnet.mongodb.documents.MongoDocumentResponse;
+	import jmcnet.mongodb.messages.interpreter.BasicResponseInterpreter;
+	import jmcnet.mongodb.messages.interpreter.MongoResponseInterpreterInterface;
 	
 	import mx.rpc.IResponder;
 	
@@ -19,6 +21,7 @@ package jmcnet.mongodb.driver
 		public var token:* = null;
 		private var _onResult:Function = null;
 		private var _onError:Function = null;
+		private var _responseInterpreter:MongoResponseInterpreterInterface = null;
 		
 		/**
 		 * Construct a new MongoResponder.
@@ -31,6 +34,7 @@ package jmcnet.mongodb.driver
 			this._onResult = onResult;
 			this._onError = onError;
 			this.token = token;
+			_responseInterpreter = new BasicResponseInterpreter();
 		}
 		
 		public function result(response:Object):void {
@@ -42,9 +46,20 @@ package jmcnet.mongodb.driver
 			else log.warn("No result callback. Ignoring response");
 		}
 		
-		public function fault(infoEvent:Object):void	{
-			log.debug("Calling fault infoEvent="+infoEvent);
-			if (_onError != null) _onError(infoEvent as Event, token);
+		public function fault(response:Object):void	{
+			log.debug("Calling fault response="+response);
+			if (_onError != null) {
+				log.debug("There is a fault callback. Call it");
+				_onError(response as MongoDocumentResponse, token);
+			}
+			else if (_onResult != null) {
+				log.debug("There is no fault callback but a result callback. Call it");
+				_onResult(response as MongoDocumentResponse, token);
+			}
 		}
+
+		public function get responseInterpreter():MongoResponseInterpreterInterface {	return _responseInterpreter; }
+		public function set responseInterpreter(value:MongoResponseInterpreterInterface):void { _responseInterpreter = value;	}
+
 	}
 }

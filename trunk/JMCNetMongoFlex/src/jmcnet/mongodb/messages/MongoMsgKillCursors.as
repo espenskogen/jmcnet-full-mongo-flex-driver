@@ -45,5 +45,9 @@ package jmcnet.mongodb.messages
 			
 			return msg;
 		}
+		
+		override public function toString():String {
+			return "[MongoMsgKillCursors : document="+(_docKillCursors != null ? _docKillCursors.toString():"empty")+" header=["+(header != null ? header.toString():"null")+"]]";
+		}
 	}
 }

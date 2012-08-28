@@ -12,6 +12,8 @@ package jmcnet.mongodb.documents
 	
 	import mx.collections.ArrayCollection;
 	import mx.utils.ObjectUtil;
+	
+	import org.flexunit.internals.namespaces.classInternal;
 
 	/**
 	 * A generic JSON document formed by key/value pairs stored in a HashTable
@@ -23,6 +25,10 @@ package jmcnet.mongodb.documents
 		
 		private var _table:HashTable = new HashTable();
 		
+		/**
+		 * Construct a new MongoDocument and add the key/value pair to it.
+		 * @see addKeyPairValue
+		 */
 		public function MongoDocument(key:String=null, value:Object=null)	{
 			if (key != null)
 				addKeyValuePair(key, value);
@@ -31,25 +37,12 @@ package jmcnet.mongodb.documents
 		/**
 		 * Add a key value pair to the MongoDocument object.
 		 * @param key String The key used to name the value
-		 * @param value Object The object to store in the MongoDocument. Type possible for value is Number, String, Date, Boolean, MongoDocumentInterface, Array or ArrayCollection. 
+		 * @param value Object The object to store in the MongoDocument. Any type is possible for value.
 		 * @return this
 		 */
 		public function addKeyValuePair(key:String, value:Object):MongoDocument {
 			if (logDocument) log.debug("addKeyValuePair key="+key+" value="+value);
-//			if (value != null) {
-//				// value can only be String, Number, Boolean, uint, int or Date
-//				if (! (value is Number) &&
-//					! (value is String) &&
-//					! (value is Date) &&
-//					! (value is Boolean) &&
-//					! (value is MongoDocumentInterface) &&
-//					! (value is Array) &&
-//					! (value is ArrayCollection)) {
-//					var errMsg:String="document value can only be one of Number, String, Date, Boolean, MongoDocumentInterface, Array or ArrayCollection";
-//					log.error(errMsg);
-//					throw new ExceptionJMCNetMongoDB(errMsg);
-//				}
-//			}
+
 			if (value != null && value is ArrayCollection) {
 				if (logDocument) log.debug("value is ArrayCollection");
 				_table.addItem(key, (value as ArrayCollection).toArray());
@@ -60,6 +53,14 @@ package jmcnet.mongodb.documents
 			}
 			
 			return this;
+		}
+		
+		/**
+		 * The static version of addKeyPairValue.
+		 * see addKeyPairValue for more informations.
+		 */
+		public static function addKeyValuePair(key:String, value:Object):MongoDocument {
+			return new MongoDocument(key, value);
 		}
 		
 		public function getKeys():Array {
@@ -99,15 +100,17 @@ package jmcnet.mongodb.documents
 		}
 		
 		/**
-		 * Transform a generic MongoDocument in an object which classname is given
+		 * Transform a generic MongoDocument in an object which classname is given.
+		 * If destClass is null, convert into generic object class (Object and ArrayCollection).
+		 * @return destClass instance if given or Object if destClass is null.
 		 */
-		public function toObject(destClass:Class):* {
-			log.info("Converting MongoDocument to object class :'"+destClass);
+		public function toObject(destClass:Class=null):* {
+			log.info("Converting MongoDocument to object class :'"+destClass+"'");
 			return populateObjectFromObject(this, destClass);
 		}
 		
 		/**
-		 * Populate one Object from values stored in a HashTable.
+		 * Populate one Object from values stored in a HashTable. If destClass is null, convert into generic object class (Object and ArrayCollection).
 		 * @param destinationClass : the class of the expected object
 		 */
 		private function populateObjectFromObject(source:Object, destClass:Class):Object {
@@ -152,11 +155,14 @@ package jmcnet.mongodb.documents
 		 */
 		private function populateObjectFromHashTable(source:HashTable, destClass:Class):Object {
 			if (logDocument) log.debug("Calling populateObjectFromHashTable source="+source+" destClass="+destClass);
-			var obj:Object = new destClass();
+			var obj:Object;
+			if (destClass != null) obj = new destClass();
+			else obj = new Object();
+			
 			// looking for all attributes
 			var attributes:HashTable;
 			// If we are on a Object, set all attributes contained in HashTable, else set all attributes in the destClass
-			if (destClass == Object) {
+			if (obj is Object) {
 				attributes = source;
 			}
 			else {
@@ -180,7 +186,8 @@ package jmcnet.mongodb.documents
 					if (logDocument) log.debug("Array element type is : "+destClassName);
 				}
 				if (logDocument) log.debug("Populating attribute : "+attributeName+" value="+item+" className="+itemClassName+" destClassName="+destClassName);
-				obj[attributeName] = populateObjectFromObject(item, getDefinitionByName(destClassName) as Class);
+				if (destClass != null)	obj[attributeName] = populateObjectFromObject(item, getDefinitionByName(destClassName) as Class);
+				else obj[attributeName] = populateObjectFromObject(item, null);
 			}
 			
 			if (logDocument) log.debug("End of populateObjectFromHashTable ret="+ObjectUtil.toString(obj));
@@ -192,108 +199,25 @@ package jmcnet.mongodb.documents
 		 * @param destinationClass : the class of the expected object
 		 */
 		private function populateObjectFromArray(source:Array, destClass:Class):Object {
-			if (logDocument) log.debug("Calling populateObjectFromArray source="+source);
-			var obj:Array = new Array();
-			// store all elements in a 
-			for each (var value:Object in source) {
-				obj.push(populateObjectFromObject(value, destClass));
-			}
-			
-			if (logDocument) log.debug("End of populateObjectFromArray");
-			return obj;
-		}
-		
-		/**
-		 * Transform a genreic MongoDocument in an generic object composed uniquely of ArrayCollection and Object
-		 * @return an Object containing ArrayCollection for arrays or Object or any combinsaison of the both
-		 */
-		public function toGenericObject():Object {
-			log.info("Converting MongoDocument to generic object composed of ArrayCollection and Object");
-			return populateGenericObjectFromObject(this);
-		}
-		
-		/**
-		 * Populate one Object from values stored in a HashTable.
-		 * @return an ArrayCollection for arrays or Object or any combinaison of both
-		 */
-		private function populateGenericObjectFromObject(source:Object):Object {
-			if (logDocument) log.debug("Calling populateObjectFromGenericObject source="+source);
-			var ret:Object;
-			
-			if (source is String ||
-				source is Number ||
-				source is Date   ||
-				source is Boolean ||
-				source is ObjectID ||
-				source == null) {
-				if (logDocument) log.debug("End of populateObjectFromObject ret="+source);
-				return source;
-			}
-			else if (source is MongoDocument) {
-				ret = populateGenericObjectFromHashTable((source as MongoDocument).table);
-			}
-			else if (source is HashTable) {
-				ret = populateGenericObjectFromHashTable(source as HashTable);
-			}
-			else if (source is Array) {
-				ret = populateGenericObjectFromArray(source as Array);
-			}
-				// Other objects are returned as is
-			else if (source is Object) {
-				ret = source;
+			if (logDocument) log.debug("Calling populateObjectFromArray source="+source+" destClass="+destClass);
+			var obj:*;
+			var value:Object;
+			if (destClass != null) {
+				obj = new Array();
+				// store all elements in a 
+				for each (value in source) {
+					obj.push(populateObjectFromObject(value, destClass));
+				}
 			}
 			else {
-				var msgErr:String="Object type '"+getQualifiedClassName(source)+"' not implemented in MongoDocument to Object convertion.";
-				log.error(msgErr);
-				throw new ExceptionJMCNetMongoDB(msgErr);
-			}
-			
-			if (logDocument) log.debug("End of populateObjectFromObject ret="+ObjectUtil.toString(ret));
-			return ret;
-		}
-		
-		/**
-		 * Populate one Object from values stored in a HashTable.
-		 * @param destinationClass : the class of the expected object
-		 */
-		private function populateGenericObjectFromHashTable(source:HashTable):Object {
-			if (logDocument) log.debug("Calling populateGenericObjectFromHashTable source="+source);
-			var obj:Object = new Object();
-			// looking for all attributes
-			var attributes:HashTable = source;
-			// valuate all attributes
-			for each (var attributeName:String in attributes.getAllKeys()) {
-				var item:Object = source.getItem(attributeName);
-				var itemClassName:String = getQualifiedClassName(item);
-				var destClassName:String = obj is MongoDocument ? "Object":HelperClass.getClassNameOfAttribute(obj,attributeName);
-				if (itemClassName == "Array") {
-					destClassName = HelperClass.getArrayElementTypeOfArray(obj, attributeName);
-					if (destClassName == null || destClassName == "") {
-						destClassName="Object";
-					}
-					if (logDocument) log.debug("Array element type is : "+destClassName);
+				obj = new ArrayCollection();
+				// store all elements in a 
+				for each (value in source) {
+					obj.addItem(populateObjectFromObject(value, null));
 				}
-				if (logDocument) log.debug("Populating attribute : "+attributeName+" value="+item+" className="+itemClassName+" destClassName="+destClassName);
-				obj[attributeName] = populateGenericObjectFromObject(item);
 			}
 			
-			if (logDocument) log.debug("End of populateObjectFromHashTable ret="+ObjectUtil.toString(obj));
-			return obj;
-		}
-		
-		/**
-		 * Populate one Array from values stored in a HashTable.
-		 * @param destinationClass : the class of the expected object
-		 */
-		private function populateGenericObjectFromArray(source:Array):Object {
-			if (logDocument) log.debug("Calling populateGenericObjectFromArray source="+source);
-			var obj:ArrayCollection = new ArrayCollection();
-			// store all elements in a 
-			for each (var value:Object in source) {
-				obj.addItem(populateGenericObjectFromObject(value));
-			}
-			
-			if (logDocument) log.debug("End of populateGenericObjectFromArray");
+			if (logDocument) log.debug("End of populateObjectFromArray obj="+ObjectUtil.toString(obj));
 			return obj;
 		}
 		
@@ -310,7 +234,7 @@ package jmcnet.mongodb.documents
 		public function all(values:Array):MongoDocument { return addKeyValuePair("$all", values); }
 		public function in_(values:Array):MongoDocument { return addKeyValuePair("$in", values); }
 		public function nin(values:Array):MongoDocument { return addKeyValuePair("$nin", values); }
-		public function mod(modulo:int, result:int):MongoDocument { return addKeyValuePair("$mod", new Array(modulo, result)); }
+		public function mod(modulo:int, divisor:int):MongoDocument { var a:Array = new Array(); a.push(modulo, divisor); return addKeyValuePair("$mod", a); }
 		public function or(... docs:Array):MongoDocument { return addKeyValuePair("$or", docs); }
 		public function nor(... docs:Array):MongoDocument { return addKeyValuePair("$nor", docs); }
 		public function and(... docs:Array):MongoDocument { return addKeyValuePair("$and", docs); }
@@ -364,5 +288,147 @@ package jmcnet.mongodb.documents
 		public static function elemMatch(value:Object):MongoDocument { return new MongoDocument().elemMatch(value); }
 		public static function not(value:Object):MongoDocument { return new MongoDocument().not(value); }
 		
+		/**
+		 * New function used with aggregation (but not only with aggregagtion...)
+		 */
+		public function add(... docs:Array):MongoDocument { return addKeyValuePair("$add", docs); }
+		public static function add(... docs:Array):MongoDocument { return new MongoDocument().addKeyValuePair("$add", docs); }
+		
+		public function multiply(... docs:Array):MongoDocument { return addKeyValuePair("$multiply", docs); }
+		public static function multiply(... docs:Array):MongoDocument { return new MongoDocument().addKeyValuePair("$multiply", docs); }
+		
+		public function divide(value1:Object, value2:Object):MongoDocument { var a:Array = new Array(); a.push(value1, value2); return addKeyValuePair("$divide", a); }
+		public static function divide(value1:Object, value2:Object):MongoDocument { return new MongoDocument().divide(value1, value2); }
+
+		public function substract(value1:Object, value2:Object):MongoDocument { var a:Array = new Array(); a.push(value1, value2); return addKeyValuePair("$substract", a); }
+		public static function substract(value1:Object, value2:Object):MongoDocument { return new MongoDocument().substract(value1, value2); }
+		
+		public function cmp(value1:Object, value2:Object):MongoDocument { var a:Array = new Array(); a.push(value1, value2); return addKeyValuePair("$cmp", a); }
+		public static function cmp(value1:Object, value2:Object):MongoDocument { return new MongoDocument().cmp(value1, value2); }
+		
+		public function eq(value1:Object, value2:Object):MongoDocument { var a:Array = new Array(); a.push(value1, value2); return addKeyValuePair("$eq", a); }
+		public static function eq(value1:Object, value2:Object):MongoDocument { return new MongoDocument().eq(value1, value2); }
+		
+		/**
+		 * The first expression (condition) evaluates to a Boolean value. If the first expression evaluates to true, $cond returns the value of the second expression (ifTruExpression). If the first expression evaluates to false, $cond evaluates and returns the third expression (ifFalseExpression).
+		 */
+		public function cond(condition:Object, ifTrueValue:Object, ifFalseValue:Object):MongoDocument { var a:Array = new Array(); a.push(condition, ifTrueValue, ifFalseValue); return addKeyValuePair("$cond", a); }
+		public static function cond(condition:Object, ifTrueValue:Object, ifFalseValue:Object):MongoDocument { return new MongoDocument().cond(condition, ifTrueValue, ifFalseValue); }
+		
+		/**
+		 * $ifNull returns the first expression if it evaluates to a non-null value. Otherwise, $ifNull returns the second expression’s value.
+		 */
+		public function ifNull(ifNotNullValue:Object, ifNullValue:Object):MongoDocument { var a:Array = new Array(); a.push(ifNotNullValue, ifNullValue); return addKeyValuePair("$ifNull", a); }
+		public static function ifNull(ifNotNullValue:Object, ifNullValue:Object):MongoDocument { return new MongoDocument().ifNull(ifNotNullValue, ifNullValue); }
+		
+		/* String operations */
+		public function strcasecmp(value1:String, value2:String):MongoDocument { var a:Array = new Array(); a.push(value1, value2); return addKeyValuePair("$strcasecmp", a); }
+		public static function strcasecmp(value1:String, value2:String):MongoDocument { return new MongoDocument().strcasecmp(value1, value2); }
+		
+		public function substr(value:String, start:uint, length:uint):MongoDocument { var a:Array = new Array(); a.push(value, start, length); return addKeyValuePair("$substr", a); }
+		public static function substr(value:String, start:uint, length:uint):MongoDocument { return new MongoDocument().substr(value, start, length); }
+		
+		public function toLower(value:String):MongoDocument { return addKeyValuePair("$toLower", value); }
+		public static function toLower(value:String):MongoDocument { return new MongoDocument().toLower(value); }
+		
+		public function toUpper(value:String):MongoDocument { return addKeyValuePair("$toUpper", value); }
+		public static function toUpper(value:String):MongoDocument { return new MongoDocument().toUpper(value); }
+		
+		/* date operation */
+		public function dayOfYear(value:Object):MongoDocument { return addKeyValuePair("$dayOfYear", value); }
+		public static function dayOfYear(value:Object):MongoDocument { return new MongoDocument().dayOfYear(value); }
+		
+		public function dayOfMonth(value:Object):MongoDocument { return addKeyValuePair("$dayOfMonth", value); }
+		public static function dayOfMonth(value:Object):MongoDocument { return new MongoDocument().dayOfMonth(value); }
+		
+		public function dayOfWeek(value:Object):MongoDocument { return addKeyValuePair("$dayOfWeek", value); }
+		public static function dayOfWeek(value:Object):MongoDocument { return new MongoDocument().dayOfWeek(value); }
+		
+		public function year(value:Object):MongoDocument { return addKeyValuePair("$year", value); }
+		public static function year(value:Object):MongoDocument { return new MongoDocument().year(value); }
+		
+		public function month(value:Object):MongoDocument { return addKeyValuePair("$month", value); }
+		public static function month(value:Object):MongoDocument { return new MongoDocument().month(value); }
+		
+		public function hour(value:Object):MongoDocument { return addKeyValuePair("$hour", value); }
+		public static function hour(value:Object):MongoDocument { return new MongoDocument().hour(value); }
+		
+		public function minute(value:Object):MongoDocument { return addKeyValuePair("$minute", value); }
+		public static function minute(value:Object):MongoDocument { return new MongoDocument().minute(value); }
+		
+		public function second(value:Object):MongoDocument { return addKeyValuePair("$second", value); }
+		public static function second(value:Object):MongoDocument { return new MongoDocument().second(value); }
+		
+		/* Grouping functions */
+		/**
+		 * Returns the sum of all the values for a specified field in the grouped documents
+		 */
+		public function sum(value:Object):MongoDocument { return addKeyValuePair("$sum", value); }
+		public static function sum(value:Object):MongoDocument { return new MongoDocument().sum(value); }
+		
+		/**
+		 * Returns an array of all the values found in the selected field among the documents in that group.
+		 * Every unique value only appears once in the result set. There is no ordering guarantee for the output documents.
+		 * @see push for having multiple values int the resulting array
+		 */
+		public function addToSet(value:Object):MongoDocument { return addKeyValuePair("$addToSet", value); }
+		public static function addToSet(value:Object):MongoDocument { return new MongoDocument().addToSet(value); }
+		
+		/**
+		 * Returns the first value it encounters for its group.
+		 */
+		public function first(value:Object):MongoDocument { return addKeyValuePair("$first", value); }
+		public static function first(value:Object):MongoDocument { return new MongoDocument().first(value); }
+		
+		/**
+		 * Returns the last value it encounters for its group.
+		 */
+		public function last(value:Object):MongoDocument { return addKeyValuePair("$last", value); }
+		public static function last(value:Object):MongoDocument { return new MongoDocument().last(value); }
+		
+		/**
+		 * Returns the max value it encounters for its group.
+		 */
+		public function max(value:Object):MongoDocument { return addKeyValuePair("$max", value); }
+		public static function max(value:Object):MongoDocument { return new MongoDocument().max(value); }
+		
+		/**
+		 * Returns the min value it encounters for its group.
+		 */
+		public function min(value:Object):MongoDocument { return addKeyValuePair("$min", value); }
+		public static function min(value:Object):MongoDocument { return new MongoDocument().min(value); }
+		
+		/**
+		 * Returns the average value it encounters for its group.
+		 */
+		public function avg(value:Object):MongoDocument { return addKeyValuePair("$avg", value); }
+		public static function avg(value:Object):MongoDocument { return new MongoDocument().avg(value); }
+		
+		/**
+		 * Returns an array of all the values found in the selected field among the documents in that group.
+		 * A value may appear more than once in the result set if more than one field in the grouped documents has that value.
+		 * @see addToSet for having unique value in the resulting array
+		 */
+		public function push(value:Object):MongoDocument { return addKeyValuePair("$push", value); }
+		public static function push(value:Object):MongoDocument { return new MongoDocument().push(value); }
+		
+		/**
+		 * Returns a DBRef document. A DBRef can link a document from one collection to another document in another collection.
+		 * @see http://www.mongodb.org/display/DOCS/Updating+Data+in+Mongo for more informations
+		 */
+		public function addDBref(key:String, collectionName:String, id:Object, databaseName:String):MongoDocument {
+			return this.addKeyValuePair(key, MongoDocument.dbRef(collectionName, id, databaseName));
+		}
+		
+		public static function dbRef(collectionName:String, id:Object, databaseName:String=null):MongoDocument {
+			if (databaseName != null) {
+				log.warn("DBRef using alternate Database is not supported yet by driver. collectionName="+collectionName+" id="+id+" databaseName="+databaseName);
+			}
+			var ret:MongoDocument = new MongoDocument("$ref", collectionName).addKeyValuePair("$id", id);
+			if (databaseName != null) ret.addKeyValuePair("$db", databaseName);
+			
+			if (logDocument) log.debug("DBRef constructed : "+ret.toString());
+			return ret;
+		}
 	}
 }

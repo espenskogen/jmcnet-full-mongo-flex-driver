@@ -54,6 +54,12 @@ package jmcnet.mongodb.messages
 			return msg;
 		}
 		
-		override public function get needResponse():Boolean { return true;} 
+		override public function get needResponse():Boolean { return true;}
+		
+		override public function toString():String {
+			return "[MongoMsgGetMore : cursorID="+(_cursorID.toString())+" header=["+(header != null ? header.toString():"null")+"]]";
+		}
 	}
+	
+	
 }

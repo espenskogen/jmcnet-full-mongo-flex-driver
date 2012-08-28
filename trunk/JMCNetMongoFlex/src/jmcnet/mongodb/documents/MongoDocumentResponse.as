@@ -25,15 +25,31 @@ package jmcnet.mongodb.documents
 		[ArrayElementType("newjmcnetds.MongoDocument")]
 		private var _documents:Array;
 		private var _socket:TimedSocket;
+		private var _isOk:Boolean=false;
+		private var _errorMsg:String="";
+		private var _interpretedResponse:Object=null;
 		
-		public function MongoDocumentResponse(length:uint, bson:ByteArray=null, socket:TimedSocket=null) {
+		/**
+		 * The normal way to construct a MongoDocumentResponse 
+		 */
+		public function MongoDocumentResponse(length:uint=0, bson:ByteArray=null, socket:TimedSocket=null) {
 			super();
 			_socket = socket;
 			if (bson != null) decodeResponse(length, bson);
 		}
 		
+		/**
+		 * The way to construct an error MongoDocumentResponse
+		 */
+		public static function createErrorResponse(errMsg:String, socket:TimedSocket):MongoDocumentResponse {
+			var ret:MongoDocumentResponse = new MongoDocumentResponse();
+			ret.errorMsg = errMsg;
+			ret.isOk = false;
+			return ret;
+		}
+		
 		public function decodeResponse(length:uint, bson:ByteArray):void {
-			if (MongoDocument.logDocument) log.debug("Calling MongoDocumentResponse::decodeResponse");
+			if (MongoDocument.logDocument) log.debug("Calling decodeResponse length="+length);
 			bson.endian = Endian.LITTLE_ENDIAN;
 			bson.position = 0;
 			_header = new MongoMsgHeader();
@@ -62,6 +78,9 @@ package jmcnet.mongodb.documents
 				var document:MongoDocument = decodeDocument(bson);
 				_documents.push(document);
 			}
+			
+			if (isFlagQueryFailure()) isOk=false;
+			else isOk = true;
 			if (MongoDocument.logDocument) log.debug("End of MongoDocumentResponse::decodeResponse result="+ObjectUtil.toString(this));
 		}
 		
@@ -76,11 +95,15 @@ package jmcnet.mongodb.documents
 		public function isFlagAwaitCapable():Boolean { return Boolean(_responseFlags & 0x08); }
 		
 		public function toString():String {
-			var result:String="[MongoDocumentResponse flags="+_responseFlags+" cursorID="+_cursorID+" startingFrom="+_startingFrom+" numberReturned="+_numberReturned+" documents=[";
-			for each (var doc:MongoDocument in _documents) {
-				result+=doc.toString()+", ";
+			var result:String;
+			if (isOk) {
+				result="[MongoDocumentResponse - OK - flags="+_responseFlags+" cursorID="+_cursorID+" startingFrom="+_startingFrom+" numberReturned="+_numberReturned+" documents=[";
+				for each (var doc:MongoDocument in _documents) {
+					result+=doc.toString()+", ";
+				}
+				result+="]"+" header=["+(header != null ? header.toString():"null")+"]]";
 			}
-			result+="]]";
+			else result="[MongoDocumentResponse - KO - errorMsg='"+errorMsg+"']"; 
 			
 			return result;
 		}
@@ -94,5 +117,13 @@ package jmcnet.mongodb.documents
 
 		public function get socket():TimedSocket {	return _socket;	}
 
+		public function get isOk():Boolean { return _isOk;	}
+		public function set isOk(value:Boolean):void {	_isOk = value;	}
+
+		public function get errorMsg():String	{	return _errorMsg;	}
+		public function set errorMsg(value:String):void	{	_errorMsg = value;}
+
+		public function get interpretedResponse():Object {	return _interpretedResponse; }
+		public function set interpretedResponse(value:Object):void { _interpretedResponse = value; }
 	}
 }

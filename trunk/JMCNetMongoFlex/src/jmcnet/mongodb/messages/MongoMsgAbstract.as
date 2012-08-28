@@ -6,6 +6,8 @@ package jmcnet.mongodb.messages
 	import jmcnet.mongodb.bson.BSONEncoder;
 	import jmcnet.mongodb.driver.MongoResponder;
 	
+	import mx.rpc.events.HeaderEvent;
+	
 	/**
 	 * Some abstract method used by MongoDB messages
 	 */
@@ -62,10 +64,14 @@ package jmcnet.mongodb.messages
 		 */
 		public function get needResponse():Boolean { return false;}
 
-//		public function get callback():Function { return _callback;	}
-//		public function set callback(value:Function):void {	_callback = value; }
-
 		public function get responder():MongoResponder { return _responder;	}
 		public function set responder(value:MongoResponder):void { _responder = value; }
+		
+		public function toString():String {
+			return "[MongoMsgAbstract : dbName="+dbName+" collectionName="+collectionName+" header=["+(_header != null ? _header.toString():"null")+"]]";
+		}
+
+		protected function get header():MongoMsgHeader { return _header; }
+
 	}
 }

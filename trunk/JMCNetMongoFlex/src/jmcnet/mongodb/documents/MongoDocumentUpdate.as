@@ -56,5 +56,14 @@ package jmcnet.mongodb.documents
 			if (BSONEncoder.logBSON) log.debug("MongoDocumentUpdate::toBSON bson="+HelperByteArray.byteArrayToString(ba));
 			return ba;
 		}
+		
+		public function toString():String {
+			var ret:String="{ ";
+			if (_update != null) ret += "update : "+_update.toString()+" ";
+			if (_selector != null) ret += "selector : "+_selector.toString()+" ";
+			ret += " }";
+			
+			return ret;
+		}
 	}
 }

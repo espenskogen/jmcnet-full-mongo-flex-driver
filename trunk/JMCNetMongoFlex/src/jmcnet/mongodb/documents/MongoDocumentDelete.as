@@ -47,5 +47,11 @@ package jmcnet.mongodb.documents
 			if (BSONEncoder.logBSON) log.debug("MongoDocumentDelete::toBSON bson="+HelperByteArray.byteArrayToString(ba));
 			return ba;
 		}
+
+		public function toString():String {
+			return (_selector != null ? _selector.toString():"null");
+		}
+
+		public function get selector():MongoDocument { return _selector; }
 	}
 }
