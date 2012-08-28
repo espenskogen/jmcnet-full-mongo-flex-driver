@@ -20,7 +20,7 @@ package jmcnet.mongodb.messages
 		public static var requestIDCounter:uint=0; // The requestID value
 		
 		public static const OP_REPLY:uint=1; // 	Reply to a client request. responseTo is set
-		public static const OP_MSG:uint=1000 // 	generic msg command followed by a string
+		public static const OP_MSG:uint=1000 // 	generic msg command followed by a string - DEPRECATED
 		public static const OP_UPDATE:uint=2001 // 	update document
 		public static const OP_INSERT:uint=2002 // 	insert new document
 		public static const RESERVED:uint=2003 // 	formerly used for OP_GET_BY_OID
@@ -29,7 +29,7 @@ package jmcnet.mongodb.messages
 		public static const OP_DELETE:uint=2006 // 	Delete documents
 		public static const OP_KILL_CURSORS:uint=2007 // 	Tell database client is done with a cursor
 			
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoMsgHeader));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoMsgHeader);
 		
 		public function MongoMsgHeader(opCode:uint=0) {
 			this._opCode = opCode;
@@ -75,5 +75,9 @@ package jmcnet.mongodb.messages
 		public function set opCode(value:uint):void	{_opCode = value;}
 		public function set messageLength(msgLength:uint):void { this._messageLength = msgLength; }
 		public function get messageLength():uint { return _messageLength;}
+		
+		public function toString():String {
+			return "requestID="+_requestID+" responseTo="+_responseTo+" opCode="+_opCode;
+		}
 	}
 }

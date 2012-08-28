@@ -59,6 +59,10 @@ package jmcnet.mongodb.messages
 			if (BSONEncoder.logBSON) log.debug("MongoMsgUpdate::toBSON bsonMsg="+HelperByteArray.byteArrayToString(msg));
 			
 			return msg;
-		}		
+		}
+		
+		override public function toString():String {
+			return "[MongoMsgDelete : doc="+(_update != null ? _update.toString():"null")+" header=["+(header != null ? header.toString():"null")+"]]";
+		}
 	}
 }

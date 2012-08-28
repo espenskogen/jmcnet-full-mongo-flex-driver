@@ -2,6 +2,8 @@
 <flexLibProperties includeAllClasses="true" useMultiPlatformConfig="false" version="3">
   <includeClasses>
     <classEntry path="jmcnet.mongodb.driver.MongoResponder"/>
+    <classEntry path="jmcnet.mongodb.messages.interpreter.MongoResponseInterpreterInterface"/>
+    <classEntry path="jmcnet.mongodb.messages.interpreter.BasicResponseInterpreter"/>
   </includeClasses>
   <includeResources/>
   <namespaceManifests/>

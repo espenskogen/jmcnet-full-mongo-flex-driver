@@ -65,5 +65,9 @@ package jmcnet.mongodb.messages
 			
 			return msg;
 		}
+		
+		override public function toString():String {
+			return "[MongoMsgInsert : document[0]="+(_documents.length > 0 ? _documents[0].toString():"empty")+" header=["+(header != null ? header.toString():"null")+"]]";
+		}
 	}
 }

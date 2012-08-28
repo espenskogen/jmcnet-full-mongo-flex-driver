@@ -313,8 +313,10 @@ package jmcnet.mongodb.bson
 			var i1:uint = n / (256 * 256 * 256 * 256);
 			var i2:uint = n % (256 * 256 * 256 * 256);
 			
-			ba.writeUnsignedInt(i1);
+			if (logBSON) log.debug("convertDate n="+n+" i1="+i1+" i2="+i2);
+			
 			ba.writeUnsignedInt(i2);
+			ba.writeUnsignedInt(i1);
 			if (logBSON) log.debug("End of convertDate result='"+HelperByteArray.byteArrayToString(ba)+"'");
 			return ba;
 		}

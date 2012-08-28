@@ -45,5 +45,12 @@ package jmcnet.mongodb.documents
 			if (BSONEncoder.logBSON) log.debug("MongoDocumentKillCursors::toBSON bson="+HelperByteArray.byteArrayToString(ba));
 			return ba;
 		}
+		
+		public function toString():String {
+			var ret:String="[";
+			for each (var cursor:Cursor in _lstCursorsID) ret += cursor.toString()+", ";
+			ret += "]";
+			return ret;
+		}
 	}
 }

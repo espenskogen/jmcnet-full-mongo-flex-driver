@@ -125,7 +125,7 @@ package jmcnet.mongodb.bson
 		{
 			var lowPos:uint  = ba.readUnsignedInt();
 			var highPos:uint = ba.readUnsignedInt();
-			var rep:Number   = (lowPos * 256 * 256 * 256 * 256) + highPos;
+			var rep:Number   = (highPos * 256 * 256 * 256 * 256) + lowPos;
 			
 			return new Date(rep);
 		}

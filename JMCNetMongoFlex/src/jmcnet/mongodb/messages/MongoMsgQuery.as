@@ -16,7 +16,7 @@ package jmcnet.mongodb.messages
 	 */
 	public class MongoMsgQuery extends MongoMsgAbstract
 	{
-		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(MongoMsgQuery));
+		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoMsgQuery);
 		
 		private var _flags:uint=0;
 		private var _numberToSkip:uint=0;
@@ -44,7 +44,7 @@ package jmcnet.mongodb.messages
 		public function set returnFieldsSelector(value:MongoDocument):void	{	_returnFieldsSelector = value;	}
 
 		override public function toBSON():ByteArray {
-			if (BSONEncoder.logBSON) log.debug("Calling MongoMsgQuery::toBSON");
+			if (BSONEncoder.logBSON) log.debug("Calling toBSON");
 			
 			// There must one or mode documents to insert
 			var msg:ByteArray = new ByteArray();
@@ -82,6 +82,11 @@ package jmcnet.mongodb.messages
 			return msg;
 		}
 		
-		override public function get needResponse():Boolean { return true;} 
+		override public function get needResponse():Boolean { return true;}
+		
+		override public function toString():String {
+			var msg:String="[MongoMsgQuery : query="+(query != null ? query.toString():"null")+" header=["+(header != null ? header.toString():"null")+"]]";
+			return msg;
+		}
 	}
 }
