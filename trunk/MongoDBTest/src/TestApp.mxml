@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- s:WindowedApplication -->
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   creationComplete="init();"
+					   >
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	
+	
+	<fx:Script>
+		<![CDATA[
+			import MongoDBConnManager;
+			
+			import jmcnet.libcommun.communs.structures.HashTable;
+			import jmcnet.mongodb.documents.MongoDocument;
+			import jmcnet.mongodb.documents.MongoDocumentQuery;
+			import jmcnet.mongodb.documents.MongoDocumentResponse;
+			import jmcnet.mongodb.driver.JMCNetMongoDBDriver;
+			import jmcnet.mongodb.driver.MongoResponder;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.CursorManager;
+			import mx.utils.ObjectUtil;
+			
+			
+			public var mongoDriver:JMCNetMongoDBDriver = null;
+			
+			function init():void
+			{
+				mongoDriver = MongoDBConnManager.getMongoConnection();	
+			}
+			
+		 
+			public function  getTestDoc():void 
+			{ 
+				
+				CursorManager.removeBusyCursor();
+				
+				var methodName:String = "getSegmentationProgressReport";
+				var params:String = "ARCserve Backup";
+				
+				var query:MongoDocumentQuery = new MongoDocumentQuery(); 
+				
+				query.addQueryCriteria("method" , methodName);
+				
+				trace("Calling queryDoc");
+				mongoDriver.queryDoc("reporting_serialization6",query, new MongoResponder(onMyResponseReceived));
+				
+			}
+			
+			
+			function onMyResponseReceived (responseDoc:MongoDocumentResponse, token:*):void
+			{ 
+				trace("In onMyResponseReceived callback");
+				var obj:MongoDocument = responseDoc.getDocument(0);
+				
+				var ar : Array = obj.getValue("value") as Array;
+				
+//				var ac: ArrayCollection = DeSerailzationUtil.convertArrayToArrayCollection(ar);
+				
+				Alert.show(ObjectUtil.toString(ar));
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:Button label="..." click="getTestDoc()"/>
+	
+</s:Application>

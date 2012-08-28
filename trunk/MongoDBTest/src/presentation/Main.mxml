@@ -32,6 +32,7 @@
 			import modele.TestObjectIDVO;
 			import modele.TestVO;
 			
+			import mx.collections.ArrayCollection;
 			import mx.events.CloseEvent;
 			import mx.managers.PopUpManager;
 			import mx.utils.ObjectUtil;
@@ -39,7 +40,7 @@
 			[Inject]
 			public var mongoDriver:JMCNetMongoDBDriver;
 			
-			private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(flash.utils.getQualifiedClassName(Main));
+			private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(Main);
 			
 			private var cursorID:Cursor=new Cursor(0,0);
 			private var mapFunctionCode:String = "function() {\n    emit(this.attrString, { total : this.attrInt32, nb : 1 });\n}";
@@ -126,13 +127,11 @@
 			
 			protected function onLastErrorCallback(response:MongoDocumentResponse, token:*):void {
 				log.evt("In onLastErrorCallback result : "+response.toString()+" token="+token); 
-				if (response.numberReturned == 1) {
-					if (! response.getDocument(0).getValue("err")) {
-						console.text += "\nonLastError : Résultat OK. Message="+response.toString();
-					}
-					else {
-						console.text += "\nonLastError : Dernière erreur remontée : "+response.toString();
-					}
+				if (response.isOk) {
+					console.text += "\nonLastError : Résultat OK. Raw message="+response.toString();
+				}
+				else {
+					console.text += "\nonLastError : Résultat KO. ErrorMsg="+response.errorMsg+" raw message="+response.toString();
 				}
 			}
 			
@@ -163,14 +162,14 @@
 			{
 				trace("Dans creerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nCréation de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.createCollection(Constantes.documentsCollectionName, new MongoResponder(checkLastErrorCallback));
+				mongoDriver.createCollection(Constantes.documentsCollectionName);
 			}
 			
 			protected function renameCollectionClickHandler(event:MouseEvent):void
 			{
 				trace("Dans renameCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nRename of collection '"+Constantes.documentsCollectionName+"' to newCollectionName (only works with the admin db) ...";
-				mongoDriver.renameCollection(Constantes.documentsCollectionName, "newCollectionName",  new MongoResponder(checkLastErrorCallback));
+				mongoDriver.renameCollection(Constantes.documentsCollectionName, "newCollectionName");
 			}
 			
 			protected function checkLastErrorCallback(responseDoc:MongoDocumentResponse, token:*):void {
@@ -191,7 +190,7 @@
 			{
 				log.evt("Dans supprimerCollectionClickHandler");
 				console.text += "\n------------------------------------------------------\nSuppression de la collection '"+Constantes.documentsCollectionName+"' ...";
-				mongoDriver.dropCollection(Constantes.documentsCollectionName, new MongoResponder(checkLastErrorCallback));
+				mongoDriver.dropCollection(Constantes.documentsCollectionName);
 			}
 			
 			protected function lister_clickHandler(event:MouseEvent):void
@@ -216,7 +215,7 @@
 						
 			private function onResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
 				log.evt("Reception of a response : "+responseDoc.toString());
-				console.text += "\nThe response : \n";
+				console.text += "\nThe raw response : \n";
 				console.text += "\n    responseTo="+responseDoc.header.responseTo;
 				console.text += "\n    flags=";
 				if (responseDoc.isFlagCursorNotFound()) console.text += "[CursorNotFound]";
@@ -228,6 +227,11 @@
 				console.text += "\n    numberReturned="+responseDoc.numberReturned;
 				for (var i:int=0; i < responseDoc.numberReturned; i++) {
 					console.text += "\n    document["+i+"]="+responseDoc.getDocument(i).toString();
+				}
+				console.text += "\n\nThe interpreted response : \n";
+				for ( i=0; i < responseDoc.interpretedResponse.length; i++) {
+					log.debug("responseDoc.interpretedResponse="+responseDoc.interpretedResponse);
+					console.text += "\n-----\ndocument["+i+"]="+ObjectUtil.toString(responseDoc.interpretedResponse[i]);
 				}
 			}
 			

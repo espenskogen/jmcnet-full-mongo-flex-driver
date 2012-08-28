@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<actionScriptProperties analytics="false" mainApplicationPath="MongoDBTest.mxml" projectUUID="32aba2cb-a100-41f7-a483-05d11693c8cf" version="10">
+<actionScriptProperties analytics="false" mainApplicationPath="MongoDbTestApp.mxml" projectUUID="32aba2cb-a100-41f7-a483-05d11693c8cf" version="10">
   <compiler additionalCompilerArguments="-locale en_US" autoRSLOrdering="true" copyDependentFiles="true" fteInMXComponents="false" generateAccessible="true" htmlExpressInstall="true" htmlGenerate="true" htmlHistoryManagement="true" htmlPlayerVersionCheck="true" includeNetmonSwc="false" outputFolderPath="bin-debug" removeUnusedRSL="true" sourceFolderPath="src" strict="true" targetPlayerVersion="0.0.0" useApolloConfig="false" useDebugRSLSwfs="true" verifyDigests="true" warn="true">
     <compilerSourcePath/>
     <libraryPath defaultLinkType="0">
@@ -19,7 +19,8 @@
   </compiler>
   <applications>
     <application path="MongoDbTestApp.mxml"/>
-    <application path="MongoDBTest.mxml"/>
+    <application path="presentation/Main.mxml"/>
+    <application path="TestApp.mxml"/>
   </applications>
   <modules/>
   <buildCSSFiles/>
