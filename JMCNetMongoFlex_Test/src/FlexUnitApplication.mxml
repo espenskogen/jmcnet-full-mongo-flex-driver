@@ -10,10 +10,14 @@
 	<fx:Script>
 		<![CDATA[
 			import junit.MongoDriverTest;
+			import junit.MongoDBRefTest;
+			import junit.MongoAggregationTest;
 			
 			public function currentRunTestSuite():Array
 			{
 				var testsToRun:Array = new Array();
+				testsToRun.push(junit.MongoAggregationTest);
+				testsToRun.push(junit.MongoDBRefTest);
 				testsToRun.push(junit.MongoDriverTest);
 				return testsToRun;
 			}

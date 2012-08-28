@@ -177,7 +177,7 @@ package junit
 			var n:Date=new Date(2012,05,08,15,18,38,900);
 			var result:ByteArray = BSONEncoder.encodeObjectToBSON(n);
 			log.debug("result date : "+HelperByteArray.byteArrayToString(result));
-			Assert.assertEquals("0xf 0x0 0x0 0x0 0x9 0x0 0x37 0x1 0x0 0x0 0x34 0x23 0x3f 0xcc 0x0", HelperByteArray.byteArrayToString(result));
+			Assert.assertEquals("0xf 0x0 0x0 0x0 0x9 0x0 0x34 0x23 0x3f 0xcc 0x37 0x1 0x0 0x0 0x0", HelperByteArray.byteArrayToString(result));
 		}
 		
 		/**
@@ -485,6 +485,7 @@ package junit
 		}
 		
 		private var obj:TestComplexObjectIDVO;
+		private var date:Date = new Date();
 		
 		[Test(async, timeout=5000)]
 		public function testComplexObject():void {
@@ -493,7 +494,8 @@ package junit
 			var testvo1:TestVO = new TestVO("2nd String", 20, 124.456, true);
 			var testvo2:TestVO = new TestVO("3rd String", 21, 125.456, false);
 			var testvo3:TestVO = new TestVO("4rd String", 22, 126.456, true);
-			obj = new TestComplexObjectIDVO(ObjectID.createFromString("myObject"), 16, testvo, new Array(testvo1, testvo2), new Array(testvo3));
+			
+			obj = new TestComplexObjectIDVO(ObjectID.createFromString("myObject"), 16, testvo, new Array(testvo1, testvo2), new Array(testvo3), date);
 			
 			driver.databaseName = DATABASENAME;
 			driver.hostname = SERVER;
@@ -537,6 +539,7 @@ package junit
 			var vo:TestComplexObjectIDVO = rep.documents[0].toObject(TestComplexObjectIDVO);
 			Assert.assertEquals("00086d794f626a6563740000", vo._id.toString());
 			Assert.assertEquals(16, vo.attrInt32);
+			Assert.assertEquals(date, vo.attrDate);
 			
 			Assert.assertNotNull(vo.testvo);
 			Assert.assertTrue(vo.testvo is TestVO);
@@ -566,6 +569,8 @@ package junit
 			Assert.assertEquals("4rd String", vo.typeArrayTestvo[0].attrString);
 			Assert.assertEquals(126.456, vo.typeArrayTestvo[0].attrNumber);
 			Assert.assertTrue(vo.typeArrayTestvo[0].attrBoolean);
+			
+			
 		}
 		
 		[Test]
@@ -855,8 +860,8 @@ package junit
 			Assert.assertEquals(13, obj2.attr2);
 			Assert.assertEquals(false, obj2.attr3);
 			
-			// Convert by using toGenericObject
-			var genericObject:Object = vo1.toGenericObject();
+			// Convert by using toObject
+			var genericObject:Object = vo1.toObject();
 			Assert.assertTrue(genericObject.arrayCollectionName is ArrayCollection);
 			Assert.assertTrue(genericObject._id is ObjectID);
 			var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
@@ -898,7 +903,7 @@ package junit
 			m.addKeyValuePair("a8", new Accordion());
 			
 			// Some verifications
-			var obj:Object = m.toGenericObject();
+			var obj:Object = m.toObject();
 			Assert.assertEquals("string1", obj.a1);
 			Assert.assertEquals(d, obj.a2);
 			Assert.assertEquals(12, obj.a3);
