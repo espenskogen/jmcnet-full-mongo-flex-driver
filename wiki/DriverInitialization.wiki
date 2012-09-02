@@ -45,6 +45,7 @@ The parameters are the following :
   * *password* (String) : password of the user for authentication. This password must be non encrypted. Default value is null,
   * logBSON (Boolean) : if true trace BSON encoding/decoding. Default value is false,
   * logDocument (Boolean) : if true trace all Document manipulation. Default value is false.
+  * logSocketPool (Boolean) : if true trace all Sockets manipulation. Default value is false.
 
 (1) : parameter *MUST* be provided.
 
@@ -152,11 +153,13 @@ MongoDB and FLEX are massively asynchronous. This means that when you post a com
 
 The driver uses socket pooling to interact with the server. So, each command are thrown in a separate socket and each socket waits for an answer if there is one.
 
-So, if you issue 2 commands in sequence, you are not sure that the first is terminated before the second is thrown. This can be particularly a problem when you throw a _getLastError_ command after an insert ou update or delete.
+So, if you send 2 commands in sequence, you are not sure that the first is terminated before the second is thrown. This can be particularly a problem when you throw a _getLastError_ command after an insert ou update or delete.
 
 In safe mode, the driver always send the _getLastError_ command in the *same socket* than the command itself. This ensure that those commands are sequential.
 
-If you want to sequentially call the server, you MUST use callback method and send the 2nd command when callback is called.
+If you want to sequentially call the server :
+  * you MUST use callback method and send the 2nd command when callback is called,
+  *  or force to driver to use only one socket.
 
 A socket is released in the pool when the answer is received (for command with answer). So there is no risk of mixing answers of different command.
 
@@ -182,25 +185,28 @@ protected function onInsertCallback(response:MongoDocumentResponse):void {
 }}}
 
 == Multiple drivers manipulations ==
-In case you deals with multiple databases, you need to instanciate one driver per database. `JMCNetMongoDBDriver` holds reference to all drivers instanciated.
+In case you deals with multiple databases, you need to instanciate one driver per database. `JMCNetMongoDBDriver` holds references to all drivers instanciated.
 You can access all drivers by using the `findDriver` method.
 
 {{{
 /**
- * Find a driver in the list of connected driver. If databaseName is null, the first driver in the list is returned (usefull for mono-driver applications)
+ * Find a driver in the list of connected driver.
+ * If databaseName is null, the first driver in the list is returned (usefull for mono-driver applications)
  * @param databaseName (String) : the name of the database's driver to find or null to return the first one.
  * @return driver The JMCNetMongoDBDriver corresponding to databaseName or the first if databaseName is null
  * @throws ExceptionJMCNetMongoDB if no driver if found for databaseName provided
  */
 public static function findDriver(databaseName:String=null):JMCNetMongoDBDriver;
 }}}
-Note : for mono drivers applications, simply use findDriver without parameter to have access to the unique driver.
+Note : for mono driver applications, simply use findDriver without parameter to have access to the unique driver.
 
 *IMPORTANT note :*
-Drivers are registred when calling `connect` for the first time. So, `findDriver` will not find your driver before `connect` is called.
+Drivers are registred when calling _connect_ for the first time. So, _findDriver_ will not find your driver before _connect_ is called.
 
 = See also =
   * [Home],
   * [Installation],
+  * [Responder Using responder],
+  * [CollectionManipulation Collection manipulation] (create, drop),
 
 <g:plusone size="medium"></g:plusone>

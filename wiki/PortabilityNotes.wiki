@@ -8,13 +8,13 @@
 This page will explain, how to modify your code between driver's release.
 
 = Prior 1.4 to 2.0 =
-2.0 release adds the Responder capabilities to driver.
+2.0 release adds the Responder capabilities to driver. See [Responder].
 
 You just need to transform this kind of call :
 {{{
 mongoDriver.driverMethod("documentsCollectionName", ..., onCallback);
 }}}
-on this (add new MongoResponder around the callback name) :
+on this (add new !MongoResponder around the callback name) :
 {{{
 mongoDriver.driverMethod("documentsCollectionName", ..., new MongoResponder(onCallback));
 }}}
