@@ -27,8 +27,8 @@ public function insertDoc(collectionName:String, documents:Array, responder:Mong
 Documents is an array of objects that will be inserted in the collection. Each object can be :
   * a !MongoDocument object : a document,
   * a POFO (Plain Old Flex Object) : a "normal" object like value object. Cf. [DirectObject Direct object manipulation] for more informations.
-  * an Array of Object and/or ArrayCollection,
-  * an native Flex object like String, int, Number, Date, Object, ArrayCollection, ...
+  * an Array of Object and/or !ArrayCollection,
+  * an native Flex object like String, int, Number, Date, Object, !ArrayCollection, ...
   * any combination of the preceding types.
 
 Examples :
