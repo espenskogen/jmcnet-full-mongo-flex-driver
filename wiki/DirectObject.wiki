@@ -266,9 +266,11 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
-= New in 1.5 : Generic objects manipulation =
+= New in 2.0 =
+== Generic objects manipulation ==
 In some case, you prefer manipulate more generic Flex objects like Object and !ArrayCollection.
-You can achieve this using the !MongoDocument.toGenericObject() method.
+You can achieve this using the !MongoDocument.toObject() method with a null parameter.
+
 You use it like this :
 {{{
 // The arrayCollection to deals with
@@ -298,7 +300,7 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
 
 	// Convert by using toGenericObject
-	var genericObject:Object = vo1.toGenericObject();
+	var genericObject:Object = vo1.toObject();
 	Assert.assertTrue(genericObject.arrayCollectionName is ArrayCollection);
 	Assert.assertTrue(genericObject._id is ObjectID);
 	var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
@@ -317,7 +319,7 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 }}}
 This use is more simplier that the one explain in previous chapter and must be prefer if possible.
 
-Another simple exmaple demonstrating the toGenericObject() method :
+Another simple exmaple demonstrating the toObject() method :
 {{{
 private var array:ArrayCollection = new ArrayCollection([
 	{ attr1:"value1", attr2:12, attr3:true},
@@ -335,7 +337,7 @@ m.addKeyValuePair("a6", ["string1", "string2"]);
 m.addKeyValuePair("a7", array);
 			
 // toGenericObject conversion and do some verifications
-var obj:Object = m.toGenericObject();
+var obj:Object = m.toObject();
 Assert.assertEquals("string1", obj.a1);
 Assert.assertEquals(d, obj.a2);
 Assert.assertEquals(12, obj.a3);
@@ -353,6 +355,44 @@ Assert.assertEquals(true, obj.a7[0].attr3);
 Assert.assertEquals("value2", obj.a7[1].attr1);
 Assert.assertEquals(13, obj.a7[1].attr2);
 Assert.assertEquals(false, obj.a7[1].attr3);
+}}}
+
+== Using generic object in query's results ==
+You can use directly generic object in !MongoDocumentResponse returned by a query. The !MongoDocumentResponse provide a `toInterpretedObject` attribute (a ArrayCollection) which contains all `documents` transformed in generic !Object.
+Here is a complete example extracted from FlexUnit testing :
+{{{
+private var doc1:Object = {
+	_id : ObjectID.createFromString("doc1"),
+	title : "this is my first title" ,
+	author : "bob" ,
+	posted : new Date(),
+	pageViews : 5 ,
+	tags : [ "fun" , "good" , "marvellous" ] ,
+	comments : [
+		{ author :"joe" , text : "this is cool" } ,
+		{ author :"sam" , text : "this is bad" }
+	],
+	other : { foo : 10 }
+};
+
+...
+driver.insertDoc("testu", [doc1]);
+...
+driver.queryDoc("testu",
+	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
+	new MongoResponder(onResponseReceived));
+...
+public function onResponseReceived(rep:MongoDocumentResponse, token:*):void {
+	assertTrue(rep.isOk);
+	assertEquals(1, rep.interpretedResponse.length);
+			
+	var repDoc1:Object = rep.interpretedResponse[0];
+
+	assertEquals(doc1.title, repDoc1.title);
+	assertEquals(doc1.author, repDoc1.author);
+	...
+}
+
 }}}
 
 = See also =
