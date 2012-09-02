@@ -25,7 +25,7 @@ private function onResponseRunCommandReady (response:MongoDocumentResponse, toke
 }}}
 
 If an _interpreter_ class is not provided, the driver uses a basic interpretor which just transform the response in generic object.
-This generic result is available in !MongoDocumentResponse.interpretedResponse.  
+This generic result is available in _MongoDocumentResponse.interpretedResponse_.  
 
 == Default callback response for command ==
 A more convenient way to catch command response is to add a listener to the driver. Then all _runCommand_ call without callback provided will call the listener.
