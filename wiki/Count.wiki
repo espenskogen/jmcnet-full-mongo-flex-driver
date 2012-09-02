@@ -31,14 +31,21 @@ var query:MongoDocument = new MongoDocument("attrString", MongoDocument.regex("^
 mongoDriver.count(Constantes.documentsCollectionName, query, onResponseReceived); 
 
 // The same counting but ignore the first and limit count to 250. Makes a snapshot to be sure that data are consistent across shards.
-mongoDriver.count(Constantes.documentsCollectionName, query, onResponseReceived,1,250,true); 
+mongoDriver.count(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived),1,250,true); 
 
-private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+private function onResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
+	if (!responseDoc.isOk) return ; // error in response
+	
 	var numberReturned:int=responseDoc.numberReturned;
 	if (numberReturned == 1) {
+		// Prior to 1.4 version
 		var ok:int=responseDoc.getDocument(0).getValue("ok");
 		if (ok) {
 			var nbDocs:int = responseDoc.getDocument(0).getValue("n");
+		}
+		// the same in 2.0 syntax
+		if (responseDoc.interpretedResponse[0].ok) {
+			var nbDocs:int = responseDoc.interpretedResponse[0].n;
 		}
 	}
 }
@@ -48,11 +55,13 @@ The answer received in the callback is a _MongoDocumentResponse_ with one docume
 
 = See also =
   * [Home],
+  * [Responder Using responder],
   * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor),
   * [Count],
   * [Distinct],
   * [Group],
-  * [MapReduce]
+  * [MapReduce],
+  * [AggregationFramework]
 
 <g:plusone size="medium"></g:plusone> 

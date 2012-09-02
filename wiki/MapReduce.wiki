@@ -25,7 +25,7 @@ MapReduce is done by using the _mapReduce_ method of the driver. The _mapReduce_
  * @param jsMode (Boolean) : if true, all JS is executed in one JS instance. Default value is false,
  * @param verbose (Boolean) : if true output all 'print' JS command to the server logs. Default is false.
  */
-public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, callback:Function,
+public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, responder:MongoResponder,
 	query:MongoDocument=null, sort:MongoDocument=null, limit:uint=0, finalize:JavaScriptCode=null,
 	scope:MongoDocument=null, jsMode:Boolean=false, verbose:Boolean=false):void
 
@@ -99,6 +99,7 @@ You can notice that _init_ can be read and modify during map/reduce/finalize JS 
 
 = See also =
   * [Home],
+  * [Responder Using responder],
   * [Query] (Find, FindOne, getMore, killCursor),
   * [Count],
   * [Distinct],

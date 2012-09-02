@@ -8,8 +8,8 @@ This page will explain, how to initialize the driver. This means :
   # Initialize the connection with the server,
   # Initialize the pool of connection,
   # Initialize the safe mode,
-  # Initialize the logging mode.
-
+  # Initialize the logging mode,
+  # Uses mutiple drivers (for connecting with multiple database)
 
 = Details =
 
@@ -29,7 +29,8 @@ Initialization of the driver for one database is done by this block of code :
 				username="[String]"
 				password="[String]"
 				logBSON="[Boolean]"
-				logDocument="[Boolean]"/>
+				logDocument="[Boolean]"
+				logSocketPool="[Boolean]"/>
 </fx:Declarations>
 }}}
 
@@ -62,7 +63,8 @@ Full initialization :
 				username="myuser"
 				password="mypassword"
 				logBSON="false"
-				logDocument="true"/>
+				logDocument="true"
+				logSocketPool="false"/>
 <fx:Declarations>
 }}}
 
@@ -167,20 +169,35 @@ Example :
 ...
 mongoDriver.insertDoc("documentsCollectionName", [obj1], null, true);
 // this command is send without waiting for the first one
-mongoDriver.insertDoc("documentsCollectionName", [obj2], onLastErrorCallback, true);
+mongoDriver.insertDoc("documentsCollectionName", [obj2], new MongoResponder(onInsertCallback), true);
 ...
 
-protected function onLastErrorCallback(response:MongoDocumentResponse):void {
+protected function onInsertCallback(response:MongoDocumentResponse):void {
 	// Called when obj2 is created 
-	mongoDriver.insertDoc("documentsCollectionName", [obj3], onLastErrorCallback, true);
+	mongoDriver.insertDoc("documentsCollectionName", [obj3], ...);
 }
 
 // obj2 can be created before obj1
 // obj3 cannot be created before obj2
 }}}
 
+== Multiple drivers manipulations ==
+In case you deals with multiple databases, you need to instanciate one driver per database. `JMCNetMongoDBDriver` holds reference to all drivers instanciated.
+You can access all drivers by using the `findDriver` method.
 
+{{{
+/**
+ * Find a driver in the list of connected driver. If databaseName is null, the first driver in the list is returned (usefull for mono-driver applications)
+ * @param databaseName (String) : the name of the database's driver to find or null to return the first one.
+ * @return driver The JMCNetMongoDBDriver corresponding to databaseName or the first if databaseName is null
+ * @throws ExceptionJMCNetMongoDB if no driver if found for databaseName provided
+ */
+public static function findDriver(databaseName:String=null):JMCNetMongoDBDriver;
+}}}
+Note : for mono drivers applications, simply use findDriver without parameter to have access to the unique driver.
 
+*IMPORTANT note :*
+Drivers are registred when calling `connect` for the first time. So, `findDriver` will not find your driver before `connect` is called.
 
 = See also =
   * [Home],

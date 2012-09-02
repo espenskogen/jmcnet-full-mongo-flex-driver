@@ -34,6 +34,7 @@ Changes are not so hard to do...
   * [Home],
   * [Installation],
   * [DriverInitialization Driver initialization] (connection pooling, safe mode),
+  * [Responder Using responder],
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),

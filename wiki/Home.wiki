@@ -26,6 +26,7 @@ Main features are :
 = Quick index =
   * [Installation],
   * [DriverInitialization Driver initialization] (connection pooling, safe mode),
+  * [Responder Using responder],
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
@@ -36,7 +37,7 @@ Main features are :
   * [MapReduce],
   * [DirectObject Direct object manipulation],
   * [ObjectID Object Identifier],
-  * [NewAggregration New aggregation framework],
+  * [AggregrationFramework New aggregation framework],
   * [DBRef DBRef manipulation],
   * [TestingAndLogging Testing and loggin capabilities].
 

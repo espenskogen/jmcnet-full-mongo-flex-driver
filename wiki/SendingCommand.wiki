@@ -10,16 +10,16 @@ This page will explain, how to send commands to the database.
 
 Sending command is done by the following method of the driver :
 {{{
-public function runCommand(command:MongoDocument, callback:Function=null ):void
+public function runCommand(command:MongoDocument, responder:MongoResponder=null ):void
 }}}
 
 The parameters are the following :
   * command (MongoDocument) : the command,
-  * callback (Function) : the callback called with command's results.
+  * responder (MongoResponder) : the responder holding the callback called with command's results.
 
 If provided, callback must have the following signature :
 {{{
-private function onResponseRunCommandReady (response:MongoDocumentResponse):void
+private function onResponseRunCommandReady (response:MongoDocumentResponse, token:*):void
 }}}
 
 == Default callback response for command ==
@@ -49,6 +49,7 @@ protected function onResponseRunCommandReady (response:MongoDocumentResponse):vo
 
 = See also =
   * [Home],
+  * [Responder Using responder],
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete)

@@ -1,0 +1,87 @@
+#summary Using responder with all driver's commands.
+#labels Featured,Phase-Implementation
+
+<wiki:toc max_depth="3" />
+
+= Introduction =
+
+This chapter will explain how to use responder with the driver's commands. Responder is a very common way to hold :
+ * normal result callback,
+ * error callback,
+ * a token object.  
+
+
+= Details =
+In all drivers commands taking a MongoResponder in parameter, the responder is facultative. If not provided, no callback will be called.
+
+== Callbacks rules ==
+When using a responder, you must provide a normal result callback, but error callback and the token are facultatives.
+If error callback is not provided, the normal callback is called in case of error. You can test if the command was OK using the _isOk_ attribute of the _MongoDocumentResponse_ object.  
+
+Normal and error callbacks must have this signature :
+{{{
+public function myCallback(response:MongoDocumentResponse, token:*);
+}}}
+
+== Token rules ==
+A token is a facultative object passed to the normal or error callback. It's a very convenient way to pass object throught callback.
+
+== Complete examples ==
+{{{
+var myTokenObject:ExampleObject = new ExampleObject(...);
+driver.insertDoc("collectionName", [doc], new MongoResponder(onInsertResponse, onErrorResponse, myTokenObject));
+...
+public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
+	// localToken is myTokenObject
+	var localToken:ExampleObject = token as ExampleObject;
+	// Here response.isOk is always true (because you provide an error callback in responder
+	if (response.isOk) {
+		// Do something usefull
+	}
+}
+
+public function onErrorResponse(response:MongoDocumentResponse, token:*):void {
+	// localToken is myTokenObject
+	var localToken:ExampleObject = token as ExampleObject;
+	// Do error ...
+}
+}}}
+
+The following code do the following in a more shorter way :
+{{{
+var myTokenObject:ExampleObject = new ExampleObject(...);
+driver.insertDoc("collectionName", [doc], new MongoResponder(onInsertResponse, null, myTokenObject));
+...
+public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
+	// localToken is myTokenObject
+	var localToken:ExampleObject = token as ExampleObject;
+	// Here response.isOk is true only if command succeeds
+	if (response.isOk) {
+		// Do something usefull
+	}
+	else {
+		// Do error ...
+	}
+}
+}}}
+ 
+
+= Quick index =
+  * [Installation],
+  * [DriverInitialization Driver initialization] (connection pooling, safe mode),
+  * [Responder Using responder],
+  * [CollectionManipulation Collection manipulation] (create, drop),
+  * [SendingCommand Running commands],
+  * [CRUD] (Create, Retrieve, Update, Delete),
+  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Count],
+  * [Distinct],
+  * [Group],
+  * [MapReduce],
+  * [DirectObject Direct object manipulation],
+  * [ObjectID Object Identifier],
+  * [AggregrationFramework New aggregation framework],
+  * [DBRef DBRef manipulation],
+  * [TestingAndLogging Testing and loggin capabilities].
+
+<g:plusone size="medium"></g:plusone> 

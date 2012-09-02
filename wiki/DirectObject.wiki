@@ -19,6 +19,44 @@ In this case, all attributes will be saved regarding of it's type.
 All native Flex type a supported String, Date, Array, int, Number, ...
 
 == New in 2.0 ==
+=== Using generic object while inserting and querying ===
+You can use directly generic object in !MongoDocumentResponse returned by a query. The !MongoDocumentResponse provide a `toInterpretedObject` attribute (a ArrayCollection) which contains all `documents` transformed in generic !Object.
+Here is a complete example extracted from FlexUnit testing :
+{{{
+private var doc1:Object = {
+	_id : ObjectID.createFromString("doc1"),
+	title : "this is my first title" ,
+	author : "bob" ,
+	posted : new Date(),
+	pageViews : 5 ,
+	tags : [ "fun" , "good" , "marvellous" ] ,
+	comments : [
+		{ author :"joe" , text : "this is cool" } ,
+		{ author :"sam" , text : "this is bad" }
+	],
+	other : { foo : 10 }
+};
+
+...
+driver.insertDoc("testu", [doc1]);
+...
+driver.queryDoc("testu",
+	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
+	new MongoResponder(onResponseReceived));
+...
+public function onResponseReceived(rep:MongoDocumentResponse, token:*):void {
+	assertTrue(rep.isOk);
+	assertEquals(1, rep.interpretedResponse.length);
+			
+	var repDoc1:Object = rep.interpretedResponse[0];
+
+	assertEquals(doc1.title, repDoc1.title);
+	assertEquals(doc1.author, repDoc1.author);
+	...
+}
+
+}}}
+
 === Generic objects manipulation ===
 In some case, you prefer manipulate more generic Flex objects like Object and !ArrayCollection.
 You can achieve this using the !MongoDocument.toObject() method with a null parameter.
@@ -71,7 +109,7 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse, tok
 	assertEquals(13, arrayCol1[1].attr2);
 	assertEquals(false, arrayCol1[1].attr3);	
 }}}
-This use is more simplier that the one explain in previous chapter and must be prefer if possible.
+This use is more simplier that the one explain in next chapter and must be prefer if possible.
 
 Another simple example demonstrating the toObject() method :
 {{{
@@ -109,44 +147,6 @@ assertEquals(true, obj.a7[0].attr3);
 assertEquals("value2", obj.a7[1].attr1);
 assertEquals(13, obj.a7[1].attr2);
 assertEquals(false, obj.a7[1].attr3);
-}}}
-
-=== Using generic object while inserting and querying ===
-You can use directly generic object in !MongoDocumentResponse returned by a query. The !MongoDocumentResponse provide a `toInterpretedObject` attribute (a ArrayCollection) which contains all `documents` transformed in generic !Object.
-Here is a complete example extracted from FlexUnit testing :
-{{{
-private var doc1:Object = {
-	_id : ObjectID.createFromString("doc1"),
-	title : "this is my first title" ,
-	author : "bob" ,
-	posted : new Date(),
-	pageViews : 5 ,
-	tags : [ "fun" , "good" , "marvellous" ] ,
-	comments : [
-		{ author :"joe" , text : "this is cool" } ,
-		{ author :"sam" , text : "this is bad" }
-	],
-	other : { foo : 10 }
-};
-
-...
-driver.insertDoc("testu", [doc1]);
-...
-driver.queryDoc("testu",
-	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
-	new MongoResponder(onResponseReceived));
-...
-public function onResponseReceived(rep:MongoDocumentResponse, token:*):void {
-	assertTrue(rep.isOk);
-	assertEquals(1, rep.interpretedResponse.length);
-			
-	var repDoc1:Object = rep.interpretedResponse[0];
-
-	assertEquals(doc1.title, repDoc1.title);
-	assertEquals(doc1.author, repDoc1.author);
-	...
-}
-
 }}}
 
 == Complex objects manipulation ==
@@ -400,6 +400,7 @@ Array of 1 !MongoDocument containing an Array named "arrayCollectionName" contai
 
 = See also =
   * [Home],
+  * [Responder Using responder],
   * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor),
   * [ObjectID object identifier]

@@ -11,6 +11,8 @@ Make your build path points to these swc files, and you are ready to use !
 
 = See also =
 
-  * [Home]
+  * [Home],
+  * [PortabilityNotes],
+  * [DriverInitialization]
 
 <g:plusone size="medium"></g:plusone>

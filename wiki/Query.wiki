@@ -31,7 +31,7 @@ mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
 // Find documents where attrArray values are all included in "arrayStringValue" and "false" values
 var query:MongoDocumentQuery = new MongoDocumentQuery();
 query.addQueryCriteria("attrArray", MongoDocument.all(new Array("arrayStringValue", false)));
-mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+mongoDriver.queryDoc("documentsCollectionName", query, new MongoResponder(onResponseReceived));
 
 // Find documents where attrInt32==18 OR attr1==1
 var query:MongoDocumentQuery = new MongoDocumentQuery();
@@ -44,7 +44,7 @@ mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
 // Find docs where (attrInt32 mod 2 != 1) AND (attrInt32 exists)
 var query:MongoDocumentQuery = new MongoDocumentQuery();
 query.addQueryCriteria("attrInt32", MongoDocument.not(MongoDocument.mod(2, 1)).exists(true));
-mongoDriver.queryDoc("documentsCollectionName", query, onResponseReceived);
+mongoDriver.queryDoc("documentsCollectionName", query, new MongoResponder(onResponseReceived));
 }}}
 
 Each operator have two methods in the MongoDocument class. One is static and can be used like this :
@@ -79,7 +79,7 @@ Example :
 // find all doc where attrString like "^string.*[12]$"
 var query:MongoDocumentQuery = new MongoDocumentQuery();
 query.addQueryCriteria("attrString", MongoDocument.regex("^string.*[12]$",true, false, false, false));
-mongoDriver.queryDoc(Constantes.documentsCollectionName, query, onResponseReceived); 
+mongoDriver.queryDoc(Constantes.documentsCollectionName, query, new MongoResponder(onResponseReceived)); 
 }}}
 MongoDB supports PCRE (Pearl Compatible Regular Expressions). More informations on regexp can be found [http://perldoc.perl.org/perlre.html there].
 
@@ -92,10 +92,10 @@ _getMoreDoc_ signature is the following :
  * Retrieve more documents on an open cursor. To open Cursor, you can call queryDoc and gets the cursorID in the response.
  * @param collectionName (String) : the name of the collection to query from,
  * @param cursorID (Cursor) : the cursor to fetch datas from. Cames from a preceding call to queryDoc,
- * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+ * @param responder (MongoResponder) : the callback called when documents are ready to read. Default value is null,
  * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number)
  */
-public function getMoreDoc(collectionName:String, cursorID:Cursor, callback:Function=null, numberToReturn:int=0):void
+public function getMoreDoc(collectionName:String, cursorID:Cursor, responder:MongoResponder=null, numberToReturn:int=0):void
 }}}
 
 Here is a complete example :
@@ -103,12 +103,16 @@ Here is a complete example :
 private var cursorID:Cursor=null;
 
 // retrieve all docs in a collection
-mongoDriver.queryDoc("documentsCollectionName", null, onResponseReceived, null, 0, 10 );
+mongoDriver.queryDoc("documentsCollectionName", null, new MongoResponder(onResponseReceived, onErrorReceived, myToken), null, 0, 10 );
 ...
 
-private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+private function onResponseReceived(responseDoc:MongoDocumentResponse, myToken:*):void {
 	...
 	cursorID = responseDoc.cursorID;
+	...
+}
+
+private function onErrorReceived(responseDoc:MongoDocumentResponse, myToken:*):void {
 	...
 }
 
@@ -232,6 +236,7 @@ Changes are not so hard to do...
   * [Home],
   * [Installation],
   * [DriverInitialization Driver initialization] (connection pooling, safe mode),
+  * [Responder Using responder],
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
@@ -239,6 +244,7 @@ Changes are not so hard to do...
   * [Count],
   * [Distinct],
   * [Group],
-  * [MapReduce]
+  * [MapReduce],
+  * [AggreagationFramework]
 
 <g:plusone size="medium"></g:plusone> 

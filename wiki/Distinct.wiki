@@ -17,7 +17,7 @@ In order to retrieve some distinct values on a query you must use the _distinct_
  * @param query (MongoDocument) : the conditions document,
  * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
  */
-public function distinct(collectionName:String, key:String, query:MongoDocument=null, callback:Function = null):void
+public function distinct(collectionName:String, key:String, query:MongoDocument=null, responder:MongoResponder = null):void
 }}}
 
 The result of the distinct command is a _MongoDocumentResponse_ and is passed to the callback if provided.
@@ -39,6 +39,7 @@ private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
 
 = See also =
   * [Home],
+  * [Responder Using responder],
   * [CRUD] (Create, Retrieve, Update, Delete),
   * [Query] (Find, FindOne, getMore, killCursor),
   * [Count],
