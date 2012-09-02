@@ -67,8 +67,8 @@ public function get depth():uint;
 public function set depth(value:uint):void;
 }}} 
 
-== Managing DBRef in MongoDocument ==
-For adding a DBRef to !MongoDocument, there is 3 methods in MongoDocument class :
+== Managing DBRef in !MongoDocument ==
+For adding a DBRef to !MongoDocument, there is 3 methods in !MongoDocument class :
 {{{
 /**
  * Returns a DBRef document. A DBRef can link a document from one collection to another document in another collection.
@@ -89,7 +89,7 @@ public function addKeyValuePair(key:String, value:Object):MongoDocument; // valu
 public static function addKeyValuePair(key:String, value:Object):MongoDocument;  // value can be a DBRef
 }}}
 
-You can also test if a MongoDocument represents a DBRef and convert it into a DBRef if needed :
+You can also test if a !MongoDocument represents a DBRef and convert it into a DBRef if needed :
 {{{
 /**
  * Check if document is a DBRef. For being a DBRef it must have one $ref and $id attribute. It could have a $db attribute and must nor have any other attribute.
@@ -105,9 +105,9 @@ public function isDBRef():Boolean;
 public function toDBRef():DBRef;
 }}}
 
-*Note :* when driver receive a response from database, it convert automatically MongoDocument document that represents DBRef (see isDBRef) into DBRef (instead of MongoDocument).
+*Note :* when driver receive a response from database, it convert automatically !MongoDocument document that represents DBRef (see isDBRef) into DBRef (instead of !MongoDocument).
 
-When having a MongoDocument containing DBRefs you can force fetching the DBRef by calling :
+When having a !MongoDocument containing DBRefs you can force fetching the DBRef by calling :
 {{{
 /**
  * Find all DBRef values and fetch them until the depth of research max in found (for circular reference inhibition).
@@ -122,16 +122,16 @@ public function fetchDBRef(maxDBRefDepth:int=-1):void;
 
 *Important note :* if a DBRef valued contains any other DBRef (an so on ...), all nested DBRef will be fetched.
 	You can control the depth of this recursive fetching by setting the _maxDBRefDepth_ attribute or setting a global _maxDBRefDepth_ attribute in the driver.
-	See [DBRef#NestedDBRef] for more informations.
+	See [DBRef#Nested_DBRef_management] for more informations.
 	
 == Nested DBRef management ==
 A DBRef value (after fetching) can contains other DBRef. When fetching DBRef of a MongoDocument, all nested DBRef can be fetched automatically.
 To control the depth of DBRef's fetching you have two way :
-  # Set a default fetching depth in driver : call _!JMCNetMongoDBDriver.maxDBRefDepth_ and pass the max depth allowed,
-  # If fetching is manual (i.e _!JMCNetMongoDBDriver.maxDBRefDepth_ = 0), you can control the depth by passing it to the _MongoDocument.fetchDBRef_ method.
+  # Set a default fetching depth in driver : call _JMCNetMongoDBDriver.maxDBRefDepth_ and pass the max depth allowed,
+  # If fetching is manual (i.e _JMCNetMongoDBDriver.maxDBRefDepth_ = 0), you can control the depth by passing it to the _!MongoDocument.fetchDBRef_ method.
   
 *WARNING : in case of circular reference (A referencing B that references A for example) the resulting document can be very important depending on _maxDBRefDepth_ value.
-	You should always consider with suspicion maxDBRefDepth > 3.
+	You should always consider with suspicion maxDBRefDepth > 3.*
 
 == Automatically fetching DBRefs ==
 This feature is very powerfull. You can tell the driver to automatically fetch DBRefs in all document received from MongoDB.
@@ -154,7 +154,7 @@ public static function set maxDBRefDepth(maxDBRefDepth:uint):void;
 public static function get maxDBRefDepth():uint;
 }}}
 
-== Code examples (from FlexUnit project) ==
+== Code examples (from !FlexUnit project) ==
 === Manually fetching document ===
 {{{
 private var doc1:Object = {
@@ -304,13 +304,13 @@ public function onResponseReceivedFetchDocComplex(rep:MongoDocumentResponse, tok
 }}}
 
 === Fetching errors ===
-When automatic fetching is activated (cf. preceding §), errors are signaled by calling the error callback of the responder.
+When automatic fetching is activated (cf. preceding chapter), errors are signaled by calling the error callback of the responder.
 Example :
 {{{
 // Fetch automatically DBRefs until depth 3
 JMCNetMongoDBDriver.maxDBRefDepth = 3;
 			
-// Test principle : 3 docs. doc1.doc2ref=DBRef on doc2, doc2.doc3ref = DBRef on doc3, doc3.docRefs[ DBRef on doc1, and doc2], doc3.doc1ref = DBRef on doc1 (circular reference) 
+// Test principle : 3 docs. doc1.doc2ref=DBRef on doc2, doc2.doc3ref = DBRef on doc3, doc3.doc1ref = DBRef on a unknown document 
 doc1.doc2Ref = new DBRef("testu2", doc2._id);
 doc2.doc3Ref = new DBRef("testu2", doc3._id);
 doc3.doc1Ref = new DBRef("testu", ObjectID.createFromString("doesn't exists"));
@@ -336,7 +336,7 @@ Here is an example :
 // Don't fetch automatically
 JMCNetMongoDBDriver.maxDBRefDepth = 0;
 			
-// Test principle : 3 docs. doc1.doc2ref=DBRef on doc2, doc2.doc3ref = DBRef on doc3, doc3.docRefs[ DBRef on doc1, and doc2], doc3.doc1ref = DBRef on doc1 (circular reference) 
+// Test principle : 3 docs. doc1.doc2ref=DBRef on doc2, doc2.doc3ref = DBRef on doc3, doc3.doc1ref = DBRef on a unknown document 
 doc1.doc2Ref = new DBRef("testu2", doc2._id);
 doc2.doc3Ref = new DBRef("testu2", doc3._id);
 doc3.doc1Ref = new DBRef("testu", ObjectID.createFromString("doesn't exists"));
