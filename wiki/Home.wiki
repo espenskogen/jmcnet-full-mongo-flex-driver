@@ -16,7 +16,12 @@ Main features are :
   # Direct CRUD object manipulation,
   # Full Aggregation support (group, MapReduce, ...),
   # BSON encoder and decoder,
-  # ObjectID helper.
+  # ObjectID helper,
+*New with 2.0 :*
+  # Native support for generic object,
+  # New aggregation framework helpers,
+  # DBRef support and automatic DBRef deferencement with cross database DBRef possibility,
+  # Testing via FlexUnit and logging capabilities. 
 
 = Quick index =
   * [Installation],
@@ -30,6 +35,9 @@ Main features are :
   * [Group],
   * [MapReduce],
   * [DirectObject Direct object manipulation],
-  * [ObjectID Object Identifier]
+  * [ObjectID Object Identifier],
+  * [NewAggregration New aggregation framework],
+  * [DBRef DBRef manipulation],
+  * [TestingAndLogging Testing and loggin capabilities].
 
 <g:plusone size="medium"></g:plusone> 
