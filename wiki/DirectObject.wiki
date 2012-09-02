@@ -18,6 +18,138 @@ It is also possible to call them with native Flex object, like VO (Value Object)
 In this case, all attributes will be saved regarding of it's type.
 All native Flex type a supported String, Date, Array, int, Number, ...
 
+== New in 2.0 ==
+=== Generic objects manipulation ===
+In some case, you prefer manipulate more generic Flex objects like Object and !ArrayCollection.
+You can achieve this using the !MongoDocument.toObject() method with a null parameter.
+
+You use it like this :
+{{{
+// The arrayCollection to deals with
+private var array:ArrayCollection = new ArrayCollection([
+	{ attr1:"value1", attr2:12, attr3:true},
+	{ attr1:"value2", attr2:13, attr3:false}
+]);
+
+...
+// We are connected, so write the doc composed of an ArrayCollection
+var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
+driver.insertDoc("testu", [doc]);
+
+...
+// Query the result
+var query:MongoDocumentQuery=new MongoDocumentQuery();
+// Ask for all object in collections
+driver.queryDoc("testu", query, new MongoResponder(onResponseReceivedArrayCollection));
+
+...
+// Analyse and decode the result
+public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse, token:*):void {
+	// check is result is ok
+	assertTrue(rep.isOk);
+	assertEquals(1, rep.documents.length);
+	
+	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
+	assertNotNull(vo1.getValue("_id"));
+	assertNotNull(vo1.getValue("arrayCollectionName"));
+
+	// Convert by using toGenericObject
+	var genericObject:Object = vo1.toObject();
+	assertTrue(genericObject.arrayCollectionName is ArrayCollection);
+	assertTrue(genericObject._id is ObjectID);
+	var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
+	assertNotNull(arrayCol1);
+	assertEquals(2, arrayCol1.length);
+			
+	// Verify 1rst object returned
+	assertEquals("value1", arrayCol1[0].attr1);
+	assertEquals(12, arrayCol1[0].attr2);
+	assertEquals(true, arrayCol1[0].attr3);
+			
+	// Verify 2nd object returned
+	assertEquals("value2", arrayCol1[1].attr1);
+	assertEquals(13, arrayCol1[1].attr2);
+	assertEquals(false, arrayCol1[1].attr3);	
+}}}
+This use is more simplier that the one explain in previous chapter and must be prefer if possible.
+
+Another simple example demonstrating the toObject() method :
+{{{
+private var array:ArrayCollection = new ArrayCollection([
+	{ attr1:"value1", attr2:12, attr3:true},
+	{ attr1:"value2", attr2:13, attr3:false}
+]);
+...
+var m:MongoDocument = new MongoDocument();
+m.addKeyValuePair("a1",new String("string1"));
+var d:Date = new Date();
+m.addKeyValuePair("a2",d);
+m.addKeyValuePair("a3",new Number(12));
+m.addKeyValuePair("a4",new Boolean(true));
+m.addKeyValuePair("a5",new MongoDocument().addKeyValuePair("k", "value").addKeyValuePair("l",15.9));
+m.addKeyValuePair("a6", ["string1", "string2"]);
+m.addKeyValuePair("a7", array);
+			
+// toGenericObject conversion and do some verifications
+var obj:Object = m.toObject();
+assertEquals("string1", obj.a1);
+assertEquals(d, obj.a2);
+assertEquals(12, obj.a3);
+assertEquals(true, obj.a4);
+			
+assertEquals("value", obj.a5.k);
+assertEquals(15.9, obj.a5.l);
+			
+assertEquals("string1", obj.a6[0]);
+assertEquals("string2", obj.a6[1]);
+			
+assertEquals("value1", obj.a7[0].attr1);
+assertEquals(12, obj.a7[0].attr2);
+assertEquals(true, obj.a7[0].attr3);
+assertEquals("value2", obj.a7[1].attr1);
+assertEquals(13, obj.a7[1].attr2);
+assertEquals(false, obj.a7[1].attr3);
+}}}
+
+=== Using generic object while inserting and querying ===
+You can use directly generic object in !MongoDocumentResponse returned by a query. The !MongoDocumentResponse provide a `toInterpretedObject` attribute (a ArrayCollection) which contains all `documents` transformed in generic !Object.
+Here is a complete example extracted from FlexUnit testing :
+{{{
+private var doc1:Object = {
+	_id : ObjectID.createFromString("doc1"),
+	title : "this is my first title" ,
+	author : "bob" ,
+	posted : new Date(),
+	pageViews : 5 ,
+	tags : [ "fun" , "good" , "marvellous" ] ,
+	comments : [
+		{ author :"joe" , text : "this is cool" } ,
+		{ author :"sam" , text : "this is bad" }
+	],
+	other : { foo : 10 }
+};
+
+...
+driver.insertDoc("testu", [doc1]);
+...
+driver.queryDoc("testu",
+	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
+	new MongoResponder(onResponseReceived));
+...
+public function onResponseReceived(rep:MongoDocumentResponse, token:*):void {
+	assertTrue(rep.isOk);
+	assertEquals(1, rep.interpretedResponse.length);
+			
+	var repDoc1:Object = rep.interpretedResponse[0];
+
+	assertEquals(doc1.title, repDoc1.title);
+	assertEquals(doc1.author, repDoc1.author);
+	...
+}
+
+}}}
+
+== Complex objects manipulation ==
 It's also possible to manipulate complex objects composed of any combination of the type described.
 
 Complete example :
@@ -197,11 +329,11 @@ driver.queryDoc("testu", query, onResponseReceivedArrayCollection);
 ...
 // Analyse and decode the result
 public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):void {
-	Assert.assertEquals(1, rep.documents.length);
+	assertEquals(1, rep.documents.length);
 	
 	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
-	Assert.assertNotNull(vo1.getValue("_id"));
-	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
+	assertNotNull(vo1.getValue("_id"));
+	assertNotNull(vo1.getValue("arrayCollectionName"));
 	
 }}}
 
@@ -210,20 +342,20 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 // Direct manipulation of the returned Array named "arrayCollectionName"		
 	// Try to convert the arrayCollectionName into an Array
 	// var array:Array = vo1.toObject(Array); // this cannot work because returned doc is not an Array
-	Assert.assertTrue(vo1.getValue("arrayCollectionName") is Array);
+	assertTrue(vo1.getValue("arrayCollectionName") is Array);
 	var array:Array = vo1.getValue("arrayCollectionName") as Array;
-	Assert.assertNotNull(array);
-	Assert.assertEquals(2, array.length);
+	assertNotNull(array);
+	assertEquals(2, array.length);
 			
 	// Verify 1rst object returned
-	Assert.assertEquals("value1", (array[0] as MongoDocument).getValue("attr1"));
-	Assert.assertEquals(12, (array[0] as MongoDocument).getValue("attr2"));
-	Assert.assertEquals(true, (array[0] as MongoDocument).getValue("attr3"));
+	assertEquals("value1", (array[0] as MongoDocument).getValue("attr1"));
+	assertEquals(12, (array[0] as MongoDocument).getValue("attr2"));
+	assertEquals(true, (array[0] as MongoDocument).getValue("attr3"));
 			
 	// Verify 2nd object returned
-	Assert.assertEquals("value2", (array[1] as MongoDocument).getValue("attr1"));
-	Assert.assertEquals(13, (array[1] as MongoDocument).getValue("attr2"));
-	Assert.assertEquals(false, (array[1] as MongoDocument).getValue("attr3"));
+	assertEquals("value2", (array[1] as MongoDocument).getValue("attr1"));
+	assertEquals(13, (array[1] as MongoDocument).getValue("attr2"));
+	assertEquals(false, (array[1] as MongoDocument).getValue("attr3"));
 	
 }}}
 
@@ -232,17 +364,17 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 // Convert the result into ArrayCollection and verify the result		
 	// Try to convert in a ArrayCollection
 	var arrayCol:ArrayCollection = new ArrayCollection(array);
-	Assert.assertEquals(2, arrayCol.length);
+	assertEquals(2, arrayCol.length);
 			
 	// Verify 1rst object returned
-	Assert.assertEquals("value1", (arrayCol[0] as MongoDocument).getValue("attr1"));
-	Assert.assertEquals(12, (arrayCol[0] as MongoDocument).getValue("attr2"));
-	Assert.assertEquals(true, (arrayCol[0] as MongoDocument).getValue("attr3"));
+	assertEquals("value1", (arrayCol[0] as MongoDocument).getValue("attr1"));
+	assertEquals(12, (arrayCol[0] as MongoDocument).getValue("attr2"));
+	assertEquals(true, (arrayCol[0] as MongoDocument).getValue("attr3"));
 			
 	// Verify 2nd object returned
-	Assert.assertEquals("value2", (arrayCol[1] as MongoDocument).getValue("attr1"));
-	Assert.assertEquals(13, (arrayCol[1] as MongoDocument).getValue("attr2"));
-	Assert.assertEquals(false, (arrayCol[1] as MongoDocument).getValue("attr3"));
+	assertEquals("value2", (arrayCol[1] as MongoDocument).getValue("attr1"));
+	assertEquals(13, (arrayCol[1] as MongoDocument).getValue("attr2"));
+	assertEquals(false, (arrayCol[1] as MongoDocument).getValue("attr3"));
 			
 }}}
 
@@ -252,150 +384,19 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 	// 3rd test -> convert into generic object
 	log.debug("Converting into generic object");
 	var obj1:Object = (arrayCol[0] as MongoDocument).toObject(Object);
-	Assert.assertEquals("value1", obj1.attr1);
-	Assert.assertEquals(12, obj1.attr2);
-	Assert.assertEquals(true, obj1.attr3);
+	assertEquals("value1", obj1.attr1);
+	assertEquals(12, obj1.attr2);
+	assertEquals(true, obj1.attr3);
 			
 	var obj2:Object = (arrayCol[1] as MongoDocument).toObject(Object);
-	Assert.assertEquals("value2", obj2.attr1);
-	Assert.assertEquals(13, obj2.attr2);
-	Assert.assertEquals(false, obj2.attr3);
+	assertEquals("value2", obj2.attr1);
+	assertEquals(13, obj2.attr2);
+	assertEquals(false, obj2.attr3);
 }
 }}}
 
 So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
-
-= New in 2.0 =
-== Generic objects manipulation ==
-In some case, you prefer manipulate more generic Flex objects like Object and !ArrayCollection.
-You can achieve this using the !MongoDocument.toObject() method with a null parameter.
-
-You use it like this :
-{{{
-// The arrayCollection to deals with
-private var array:ArrayCollection = new ArrayCollection([
-	{ attr1:"value1", attr2:12, attr3:true},
-	{ attr1:"value2", attr2:13, attr3:false}
-]);
-
-...
-// We are connected, so write the doc composed of an ArrayCollection
-var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
-driver.insertDoc("testu", [doc]);
-
-...
-// Query the result
-var query:MongoDocumentQuery=new MongoDocumentQuery();
-// Ask for all object in collections
-driver.queryDoc("testu", query, new MongoResponder(onResponseReceivedArrayCollection));
-
-...
-// Analyse and decode the result
-public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse, token:*):void {
-	// check is result is ok
-	assertTrue(rep.isOk);
-	assertEquals(1, rep.documents.length);
-	
-	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
-	assertNotNull(vo1.getValue("_id"));
-	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
-
-	// Convert by using toGenericObject
-	var genericObject:Object = vo1.toObject();
-	Assert.assertTrue(genericObject.arrayCollectionName is ArrayCollection);
-	Assert.assertTrue(genericObject._id is ObjectID);
-	var arrayCol1:ArrayCollection = genericObject.arrayCollectionName;
-	Assert.assertNotNull(arrayCol1);
-	Assert.assertEquals(2, arrayCol1.length);
-			
-	// Verify 1rst object returned
-	Assert.assertEquals("value1", arrayCol1[0].attr1);
-	Assert.assertEquals(12, arrayCol1[0].attr2);
-	Assert.assertEquals(true, arrayCol1[0].attr3);
-			
-	// Verify 2nd object returned
-	Assert.assertEquals("value2", arrayCol1[1].attr1);
-	Assert.assertEquals(13, arrayCol1[1].attr2);
-	Assert.assertEquals(false, arrayCol1[1].attr3);	
-}}}
-This use is more simplier that the one explain in previous chapter and must be prefer if possible.
-
-Another simple exmaple demonstrating the toObject() method :
-{{{
-private var array:ArrayCollection = new ArrayCollection([
-	{ attr1:"value1", attr2:12, attr3:true},
-	{ attr1:"value2", attr2:13, attr3:false}
-]);
-...
-var m:MongoDocument = new MongoDocument();
-m.addKeyValuePair("a1",new String("string1"));
-var d:Date = new Date();
-m.addKeyValuePair("a2",d);
-m.addKeyValuePair("a3",new Number(12));
-m.addKeyValuePair("a4",new Boolean(true));
-m.addKeyValuePair("a5",new MongoDocument().addKeyValuePair("k", "value").addKeyValuePair("l",15.9));
-m.addKeyValuePair("a6", ["string1", "string2"]);
-m.addKeyValuePair("a7", array);
-			
-// toGenericObject conversion and do some verifications
-var obj:Object = m.toObject();
-Assert.assertEquals("string1", obj.a1);
-Assert.assertEquals(d, obj.a2);
-Assert.assertEquals(12, obj.a3);
-Assert.assertEquals(true, obj.a4);
-			
-Assert.assertEquals("value", obj.a5.k);
-Assert.assertEquals(15.9, obj.a5.l);
-			
-Assert.assertEquals("string1", obj.a6[0]);
-Assert.assertEquals("string2", obj.a6[1]);
-			
-Assert.assertEquals("value1", obj.a7[0].attr1);
-Assert.assertEquals(12, obj.a7[0].attr2);
-Assert.assertEquals(true, obj.a7[0].attr3);
-Assert.assertEquals("value2", obj.a7[1].attr1);
-Assert.assertEquals(13, obj.a7[1].attr2);
-Assert.assertEquals(false, obj.a7[1].attr3);
-}}}
-
-== Using generic object in query's results ==
-You can use directly generic object in !MongoDocumentResponse returned by a query. The !MongoDocumentResponse provide a `toInterpretedObject` attribute (a ArrayCollection) which contains all `documents` transformed in generic !Object.
-Here is a complete example extracted from FlexUnit testing :
-{{{
-private var doc1:Object = {
-	_id : ObjectID.createFromString("doc1"),
-	title : "this is my first title" ,
-	author : "bob" ,
-	posted : new Date(),
-	pageViews : 5 ,
-	tags : [ "fun" , "good" , "marvellous" ] ,
-	comments : [
-		{ author :"joe" , text : "this is cool" } ,
-		{ author :"sam" , text : "this is bad" }
-	],
-	other : { foo : 10 }
-};
-
-...
-driver.insertDoc("testu", [doc1]);
-...
-driver.queryDoc("testu",
-	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
-	new MongoResponder(onResponseReceived));
-...
-public function onResponseReceived(rep:MongoDocumentResponse, token:*):void {
-	assertTrue(rep.isOk);
-	assertEquals(1, rep.interpretedResponse.length);
-			
-	var repDoc1:Object = rep.interpretedResponse[0];
-
-	assertEquals(doc1.title, repDoc1.title);
-	assertEquals(doc1.author, repDoc1.author);
-	...
-}
-
-}}}
 
 = See also =
   * [Home],
