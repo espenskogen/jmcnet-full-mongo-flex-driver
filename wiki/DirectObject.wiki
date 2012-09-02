@@ -104,42 +104,42 @@ public function onResponseReceived(event:EventMongoDB):void {
 	// clean up -> delete object
 	driver.dropCollection("testu");
 	var rep:MongoDocumentResponse = event.result as MongoDocumentResponse; 
-	Assert.assertEquals(1, rep.documents.length);
+	assertEquals(1, rep.documents.length);
 
 	// Retrieve a TestComplexObjectIDVO document
 	var vo:TestComplexObjectIDVO = rep.documents[0].toObject(TestComplexObjectIDVO);
 
-	Assert.assertEquals("086d794f626a65637400", vo._id.toString());
-	Assert.assertEquals(16, vo.attrInt32);
+	assertEquals("086d794f626a65637400", vo._id.toString());
+	assertEquals(16, vo.attrInt32);
 			
-	Assert.assertNotNull(vo.testvo);
-	Assert.assertTrue(vo.testvo is TestVO);
-	Assert.assertEquals(19, vo.testvo.attrInt32);
-	Assert.assertEquals("One String", vo.testvo.attrString);
-	Assert.assertEquals(123.456, vo.testvo.attrNumber);
-	Assert.assertFalse(vo.testvo.attrBoolean);
+	assertNotNull(vo.testvo);
+	assertTrue(vo.testvo is TestVO);
+	assertEquals(19, vo.testvo.attrInt32);
+	assertEquals("One String", vo.testvo.attrString);
+	assertEquals(123.456, vo.testvo.attrNumber);
+	assertFalse(vo.testvo.attrBoolean);
 			
-	Assert.assertEquals(2, vo.arrayTestvo.length);
+	assertEquals(2, vo.arrayTestvo.length);
 	// here we have send TestVO but we only get an Object in return because Array are not typed
-	Assert.assertTrue(vo.arrayTestvo[0] is Object);
-	Assert.assertEquals(20, vo.arrayTestvo[0].attrInt32);
-	Assert.assertEquals("2nd String", vo.arrayTestvo[0].attrString);
-	Assert.assertEquals(124.456, vo.arrayTestvo[0].attrNumber);
-	Assert.assertTrue(vo.arrayTestvo[0].attrBoolean);
+	assertTrue(vo.arrayTestvo[0] is Object);
+	assertEquals(20, vo.arrayTestvo[0].attrInt32);
+	assertEquals("2nd String", vo.arrayTestvo[0].attrString);
+	assertEquals(124.456, vo.arrayTestvo[0].attrNumber);
+	assertTrue(vo.arrayTestvo[0].attrBoolean);
 			
-	Assert.assertTrue(vo.arrayTestvo[1] is Object);
-	Assert.assertEquals(21, vo.arrayTestvo[1].attrInt32);
-	Assert.assertEquals("3rd String", vo.arrayTestvo[1].attrString);
-	Assert.assertEquals(125.456, vo.arrayTestvo[1].attrNumber);
-	Assert.assertFalse(vo.arrayTestvo[1].attrBoolean);
+	assertTrue(vo.arrayTestvo[1] is Object);
+	assertEquals(21, vo.arrayTestvo[1].attrInt32);
+	assertEquals("3rd String", vo.arrayTestvo[1].attrString);
+	assertEquals(125.456, vo.arrayTestvo[1].attrNumber);
+	assertFalse(vo.arrayTestvo[1].attrBoolean);
 			
-	Assert.assertEquals(1, vo.typeArrayTestvo.length);
+	assertEquals(1, vo.typeArrayTestvo.length);
 	// here we have a send TestVO and we get a real TestVO in return !!
-	Assert.assertTrue(vo.typeArrayTestvo[0] is TestVO);
-	Assert.assertEquals(22, vo.typeArrayTestvo[0].attrInt32);
-	Assert.assertEquals("4rd String", vo.typeArrayTestvo[0].attrString);
-	Assert.assertEquals(126.456, vo.typeArrayTestvo[0].attrNumber);
-	Assert.assertTrue(vo.typeArrayTestvo[0].attrBoolean);
+	assertTrue(vo.typeArrayTestvo[0] is TestVO);
+	assertEquals(22, vo.typeArrayTestvo[0].attrInt32);
+	assertEquals("4rd String", vo.typeArrayTestvo[0].attrString);
+	assertEquals(126.456, vo.typeArrayTestvo[0].attrNumber);
+	assertTrue(vo.typeArrayTestvo[0].attrBoolean);
 }
 
 }}}
@@ -282,21 +282,23 @@ private var array:ArrayCollection = new ArrayCollection([
 ...
 // We are connected, so write the doc composed of an ArrayCollection
 var doc:MongoDocument = new MongoDocument().addKeyValuePair("arrayCollectionName", array);
-driver.insertDoc("testu", [doc], onTimerArrayCollection);
+driver.insertDoc("testu", [doc]);
 
 ...
 // Query the result
 var query:MongoDocumentQuery=new MongoDocumentQuery();
 // Ask for all object in collections
-driver.queryDoc("testu", query, onResponseReceivedArrayCollection);
+driver.queryDoc("testu", query, new MongoResponder(onResponseReceivedArrayCollection));
 
 ...
 // Analyse and decode the result
-public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):void {
-	Assert.assertEquals(1, rep.documents.length);
+public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse, token:*):void {
+	// check is result is ok
+	assertTrue(rep.isOk);
+	assertEquals(1, rep.documents.length);
 	
 	var vo1:MongoDocument = rep.documents[0] as MongoDocument;
-	Assert.assertNotNull(vo1.getValue("_id"));
+	assertNotNull(vo1.getValue("_id"));
 	Assert.assertNotNull(vo1.getValue("arrayCollectionName"));
 
 	// Convert by using toGenericObject
