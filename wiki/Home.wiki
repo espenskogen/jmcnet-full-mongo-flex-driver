@@ -37,7 +37,7 @@ Main features are :
   * [MapReduce],
   * [DirectObject Direct object manipulation],
   * [ObjectID Object Identifier],
-  * [AggregrationFramework New aggregation framework],
+  * [AggregrationFramework Aggregation framework],
   * [DBRef DBRef manipulation],
   * [TestingAndLogging Testing and loggin capabilities].
 
