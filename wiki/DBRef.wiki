@@ -303,7 +303,7 @@ public function onResponseReceivedFetchDocComplex(rep:MongoDocumentResponse, tok
 }
 }}}
 
-=== Fetching errors ===
+== Fetching errors ==
 When automatic fetching is activated (cf. preceding chapter), errors are signaled by calling the error callback of the responder.
 Example :
 {{{
