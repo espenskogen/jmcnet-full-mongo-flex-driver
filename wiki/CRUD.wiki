@@ -18,10 +18,10 @@ Creating can be done by calling this method of the driver :
  * Insert one or more documents in a collection
  * @param collectionName (String) : the name of the collection to insert into,
  * @param documents (Array of Object or MongoDocument) : the objects to insert,
- * @param safeCallback (Function) : the callback called when documents are inserted (cf. safe mode). Default value is null,
+ * @param responder (MongoResponder) : the callback called when documents are inserted (cf. safe mode). Default value is null,
  * @param continueOnError (Boolean) : true if must continue when there is an error. Default value is false.
  */
-public function insertDoc(collectionName:String, documents:Array, safeCallback:Function=null, continueOnError:Boolean=true):void
+public function insertDoc(collectionName:String, documents:Array, responder:MongoResponder=null, continueOnError:Boolean=true):void
 }}}
 
 Documents is an array of objects that will be inserted in the collection. Each object can be :
