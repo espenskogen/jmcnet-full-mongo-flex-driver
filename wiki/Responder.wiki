@@ -12,7 +12,7 @@ This chapter will explain how to use responder with the driver's commands. Respo
 
 
 = Details =
-In all drivers commands taking a MongoResponder in parameter, the responder is facultative. If not provided, no callback will be called.
+In all drivers commands taking a !MongoResponder in parameter, the responder is facultative. If not provided, no callback will be called.
 
 == Callbacks rules ==
 When using a responder, you must provide a normal result callback, but error callback and the token are facultatives.
@@ -34,10 +34,9 @@ driver.insertDoc("collectionName", [doc], new MongoResponder(onInsertResponse, o
 public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
 	// localToken is myTokenObject
 	var localToken:ExampleObject = token as ExampleObject;
-	// Here response.isOk is always true (because you provide an error callback in responder
-	if (response.isOk) {
-		// Do something usefull
-	}
+	// Here response.isOk is always true (because you provide an error callback in responder)
+
+	// Do something usefull
 }
 
 public function onErrorResponse(response:MongoDocumentResponse, token:*):void {
@@ -73,15 +72,6 @@ public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
-  * [Query] (Find, FindOne, getMore, killCursor),
-  * [Count],
-  * [Distinct],
-  * [Group],
-  * [MapReduce],
-  * [DirectObject Direct object manipulation],
-  * [ObjectID Object Identifier],
-  * [AggregrationFramework New aggregation framework],
-  * [DBRef DBRef manipulation],
-  * [TestingAndLogging Testing and loggin capabilities].
+  * [Query] (Find, FindOne, getMore, killCursor).
 
 <g:plusone size="medium"></g:plusone> 
