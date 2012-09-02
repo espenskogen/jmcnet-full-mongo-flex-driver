@@ -67,9 +67,10 @@ package jmcnet.libcommun.flexunit
 			log.info("EndOf CTOR initialization");
 		}
 		
-		public function setFineDebugLevel(logDocument:Boolean, logBSON:Boolean):void {
+		public function setFineDebugLevel(logDocument:Boolean, logBSON:Boolean, logSocketPool:Boolean):void {
 			driver.logBSON = logBSON;
 			driver.logDocument = logDocument;
+			driver.logSocketPool = logSocketPool;
 		}
 		
 		[Before(async, timeout=10000)]

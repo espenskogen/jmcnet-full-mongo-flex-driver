@@ -4,6 +4,7 @@ package jmcnet.mongodb.bson
 	import flash.utils.Endian;
 	
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
+	import jmcnet.mongodb.documents.DBRef;
 	import jmcnet.mongodb.documents.JavaScriptCode;
 	import jmcnet.mongodb.documents.MongoDocument;
 	import jmcnet.mongodb.documents.ObjectID;
@@ -74,8 +75,15 @@ package jmcnet.mongodb.bson
 							else result.addKeyValuePair(attrName, bsonReadJavaScriptCode(ba));
 							break;
 						case BSONEncoder.BSON_DOCUMENT :
-							if (isArray) result.push(bsonReadDocument(ba));
-							else result.addKeyValuePair(attrName, bsonReadDocument(ba));
+							var retDoc:MongoDocument = bsonReadDocument(ba);
+							if (retDoc != null && retDoc.isDBRef()) {
+								var dbref:DBRef = retDoc.toDBRef();
+								if (isArray) result.push(dbref);
+								else result.addKeyValuePair(attrName, dbref);
+								if (logBSON) log.debug("bsonReadElements we have found a DBRef document :"+dbref.toString());			
+							}
+							else if (isArray) result.push(retDoc);
+							else result.addKeyValuePair(attrName, retDoc);
 							break;
 						case BSONEncoder.BSON_ARRAY :
 							if (isArray) result.push(bsonReadArray(ba));

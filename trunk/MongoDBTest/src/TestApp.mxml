@@ -57,9 +57,9 @@
 			function onMyResponseReceived (responseDoc:MongoDocumentResponse, token:*):void
 			{ 
 				trace("In onMyResponseReceived callback");
-				var obj:MongoDocument = responseDoc.getDocument(0);
+				var obj:Object = responseDoc.interpretedResponse[0];
 				
-				var ar : Array = obj.getValue("value") as Array;
+				var ar : Array = obj.value;
 				
 //				var ac: ArrayCollection = DeSerailzationUtil.convertArrayToArrayCollection(ar);
 				

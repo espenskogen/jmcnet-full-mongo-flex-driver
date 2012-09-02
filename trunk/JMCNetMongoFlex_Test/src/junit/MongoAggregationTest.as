@@ -43,7 +43,7 @@ package junit
 		private static var PORT:uint=27017;
 		
 		public function MongoAggregationTest() {
-			setFineDebugLevel(false, false);
+			setFineDebugLevel(false, false, false);
 			super(CONNECT_TYPE_ON_SET_UP, "testu", DATABASENAME, USERNAME, PASSWORD, SERVER, PORT, JMCNetMongoDBDriver.SAFE_MODE_SAFE, 2, 2);
 			log.info("EndOf MongoAggregationTest CTOR initialization");
 		}

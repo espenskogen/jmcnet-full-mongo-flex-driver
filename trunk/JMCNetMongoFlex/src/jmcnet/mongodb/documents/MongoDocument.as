@@ -1,5 +1,6 @@
 package jmcnet.mongodb.documents
 {
+	import flash.events.EventDispatcher;
 	import flash.utils.ByteArray;
 	import flash.utils.getDefinitionByName;
 	import flash.utils.getQualifiedClassName;
@@ -8,20 +9,27 @@ package jmcnet.mongodb.documents
 	import jmcnet.libcommun.communs.structures.HashTable;
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	import jmcnet.mongodb.bson.BSONEncoder;
+	import jmcnet.mongodb.driver.EventMongoDB;
+	import jmcnet.mongodb.driver.JMCNetMongoDBDriver;
 	import jmcnet.mongodb.errors.ExceptionJMCNetMongoDB;
 	
 	import mx.collections.ArrayCollection;
 	import mx.utils.ObjectUtil;
 	
-	import org.flexunit.internals.namespaces.classInternal;
-
+	import org.hamcrest.collection.hasItem;
+	
 	/**
 	 * A generic JSON document formed by key/value pairs stored in a HashTable
 	 */
-	public class MongoDocument implements MongoDocumentInterface
+	[Event(name=EVENT_DOCUMENT_FETCH_COMPLETE, type="jmcnet.mongodb.driver.EventMongoDB")] // Send when the all the dbref in the document has been fetched with success 
+	[Event(name=EVENT_DOCUMENT_FETCH_ERROR, type="jmcnet.mongodb.driver.EventMongoDB")] // Send when the all the dbref in the document has been fetched and almost one is in error
+	public class MongoDocument extends EventDispatcher implements MongoDocumentInterface
 	{
 		public static var logDocument:Boolean=false; 
 		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(MongoDocument);
+		
+		public static const EVENT_DOCUMENT_FETCH_COMPLETE:String="FetchComplete";
+		public static const EVENT_DOCUMENT_FETCH_ERROR:String="FetchError";
 		
 		private var _table:HashTable = new HashTable();
 		
@@ -80,7 +88,10 @@ package jmcnet.mongodb.documents
 
 		public function get table():HashTable {	return _table; }
 		
-		public function toString():String {
+		/**
+		 * Transform this MongoDocument into a human readable JSON string.
+		 */
+		override public function toString():String {
 			var result:String = "{ ";
 			var key:String;
 			var value:Object;
@@ -416,19 +427,149 @@ package jmcnet.mongodb.documents
 		 * Returns a DBRef document. A DBRef can link a document from one collection to another document in another collection.
 		 * @see http://www.mongodb.org/display/DOCS/Updating+Data+in+Mongo for more informations
 		 */
-		public function addDBref(key:String, collectionName:String, id:Object, databaseName:String):MongoDocument {
-			return this.addKeyValuePair(key, MongoDocument.dbRef(collectionName, id, databaseName));
+		public function addDBRef(key:String, collectionName:String, id:Object, databaseName:String=null):MongoDocument {
+			return this.addKeyValuePair(key, new DBRef(collectionName, id, databaseName));
 		}
 		
-		public static function dbRef(collectionName:String, id:Object, databaseName:String=null):MongoDocument {
-			if (databaseName != null) {
-				log.warn("DBRef using alternate Database is not supported yet by driver. collectionName="+collectionName+" id="+id+" databaseName="+databaseName);
-			}
-			var ret:MongoDocument = new MongoDocument("$ref", collectionName).addKeyValuePair("$id", id);
-			if (databaseName != null) ret.addKeyValuePair("$db", databaseName);
+		/**
+		 * Check if document is a DBRef. For being a DBRef it must have one $ref and $id attribute. It could have a $db attribute and must nor have any other attribute.
+		 * @return true if the doc represent a DBRef
+		 */
+		public function isDBRef():Boolean {
+			var ret:Boolean = true;
+			var keys:Array = getKeys();
+			if (keys.length < 2 || keys.length > 3) return false;
+			if (keys[0] != "$ref") return false;
+			if (keys[1] != "$id") return false;
+			if (keys.length == 3 && keys[2] != "$db") return false;
+			return true;
+		}
+		
+		/**
+		 * Convert the MongoDocument to DBRef if the document represent a DBRef. Else it returns null.
+		 * @see isDBRef
+		 * @return a DBRef object or null if the document is not a DBRef
+		 */
+		public function toDBRef():DBRef {
+			if (isDBRef()) return new DBRef(getValue("$ref").toString(), getValue("$id"), getValue("$db") != null ? getValue("$db").toString():null);
+			else return null;
+		}
+		
+		private var _nbDbRef:uint=0;
+		private var _success:Boolean=true;
+		private var _maxDBRefDepth:uint=0;
+		private var _dbRefInError:DBRef = null;
+		
+		/**
+		 * Find all DBRef values and fetch them until the depth of research max in found (for circular reference inhibition).
+		 * The EVENT_FETCH_COMPLETE is send after completion.
+		 * @param maxDBRefDepth int. the max depth when fetching nested DBRef. -1 means that value is taken from driver.
+		 * @see JMCNetMongoDBDriver.maxDBRefDepth 
+		 */
+		public function fetchDBRef(maxDBRefDepth:int=-1):void {
+			log.info("Calling fetchDBRef document="+toString());
 			
-			if (logDocument) log.debug("DBRef constructed : "+ret.toString());
-			return ret;
+			_nbDbRef=0;
+			_success = true;
+			if (maxDBRefDepth == -1) _maxDBRefDepth = JMCNetMongoDBDriver.maxDBRefDepth;
+			else _maxDBRefDepth = maxDBRefDepth as uint;
+			
+			if (_maxDBRefDepth <= 0) {
+				verifyNbDBRefAndDispatchEvent(0);
+				log.info("EndOf fetchDBRef : No document fetching is required.");
+				return ;
+			}
+			internalFetch(this, 0);
+			// Send complete event if there is no DBRef in doc
+			if (_nbDbRef == 0) if (logDocument) log.debug("There was no DBRef to fetch in this document");
+			verifyNbDBRefAndDispatchEvent(0);
+			
+			log.info("EndOf fetchDBRef");
+		}
+		
+		private function internalFetch(doc:MongoDocument, depth:uint):void {
+			if (logDocument) log.debug("Calling internalFetch document="+doc.toString()+" depth="+depth);
+			for each (var obj:Object in doc.table.getAllItems()) {
+				internalFetchObject(obj, depth);
+			}
+			
+			if (logDocument) log.debug("EndOf internalFetch document="+toString());
+		}
+		
+		private function internalFetchObject(obj:Object, depth:uint):void {
+			if (logDocument) log.debug("Calling internalFetchObject obj="+obj.toString()+" depth="+depth);
+			if (obj is MongoDocument) {
+				if (logDocument) log.debug("is document");
+				internalFetch(obj as MongoDocument, depth);
+			}
+			else if (obj is Array) {
+				if (logDocument) log.debug("is array -> fetch for each doc in array");
+				for each (var md:Object in (obj as Array)) {
+					internalFetchObject(md, depth+1);
+				}
+			}
+			else if (obj is DBRef) {
+				var dbref:DBRef = obj as DBRef;
+				dbref.addEventListener(DBRef.EVENT_DBREF_FETCH_COMPLETE, onFetchComplete);
+				dbref.addEventListener(DBRef.EVENT_DBREF_FETCH_ERROR, onFetchError);
+				_nbDbRef++;
+				if (logDocument) log.debug("is dbref -> fetching dbref="+dbref.toString()+" nbDbRef="+_nbDbRef);
+				dbref.depth = depth;
+				dbref.fetch();
+				// fecthing the value if depth < maxDBRefDepth
+				if (dbref.documentValue != null && depth+1 < _maxDBRefDepth) {
+					if (logDocument) log.debug("Fetching dbref.value");
+					internalFetchObject(dbref.documentValue, depth+1);
+				}
+			}
+			if (logDocument) log.debug("EndOf internalFetchObject obj="+obj.toString()+" depth="+depth+" nbDbRef="+_nbDbRef);
+		}
+		
+		private function onFetchComplete(event:EventMongoDB):void {
+			var dbref:DBRef = event.target as DBRef;
+			if (logDocument) log.evt("Calling onFetchComplete dbRef="+dbref.toString()+" depth="+dbref.depth);
+			
+			// fecthing the value if depth < maxDBRefDepth
+			if (dbref.documentValue != null && dbref.depth+1 < _maxDBRefDepth) {
+				if (logDocument) log.debug("Fetching dbref.value dbref.document="+dbref.documentValue.toString()+" newDepth="+(dbref.depth+1)+" nbDbRef="+_nbDbRef);
+				internalFetchObject(dbref.documentValue, dbref.depth+1);
+			}
+			
+			_nbDbRef--;
+			verifyNbDBRefAndDispatchEvent(dbref.depth);
+			
+			if (logDocument) log.info("EndOf onFetchComplete dbref="+dbref.toString()+" docToFetch="+toString());
+		}
+		
+		private function onFetchError(event:EventMongoDB):void {
+			var dbref:DBRef = event.target as DBRef;
+			log.evt("Calling onFetchError dbref="+dbref.toString());
+			
+			_nbDbRef--;
+			_success = false;
+			_dbRefInError = dbref;
+			verifyNbDBRefAndDispatchEvent(dbref.depth);
+			
+			log.info("EndOf onFetchError dbref="+toString());
+		}
+		
+		private function verifyNbDBRefAndDispatchEvent(depth:uint):void {
+			if (logDocument) log.debug("Calling verifyNbDBRefAndDispatchEvent depth="+depth+" nbDbRef="+_nbDbRef+" success="+_success);
+//			if (depth > 0) {
+//				if (logDocument) log.debug("verifyNbDBRefAndDispatchEvent :  we are not at top level -> Don't dispatch anything");
+//				return ;
+//			}
+			if (_nbDbRef <= 0) {
+				if (_success) {
+					log.evt("Dispatching EVENT_DOCUMENT_FETCH_COMPLETE. All DBRef fetch in document:"+toString()+" are successfully complete.");
+					dispatchEvent(new EventMongoDB(EVENT_DOCUMENT_FETCH_COMPLETE));
+				}
+				else {
+					log.evt("Dispatching EVENT_DOCUMENT_FETCH_ERROR. All DBRef fetch in document:"+toString()+" are done and almost one is in error.");
+					dispatchEvent(new EventMongoDB(EVENT_DOCUMENT_FETCH_ERROR, _dbRefInError));
+				}
+			}
+			else if (logDocument) log.debug("EndOf verifyNbDBRefAndDispatchEvent : There is still dbRef to fetch. nbDbRef="+_nbDbRef+" success="+_success);
 		}
 	}
 }

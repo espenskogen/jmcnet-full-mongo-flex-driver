@@ -12,8 +12,10 @@ package jmcnet.mongodb.messages
 	import jmcnet.libcommun.socketpool.TimedSocket;
 	import jmcnet.mongodb.bson.BSONEncoder;
 	import jmcnet.mongodb.bson.HelperByteArray;
+	import jmcnet.mongodb.documents.DBRef;
 	import jmcnet.mongodb.documents.MongoDocument;
 	import jmcnet.mongodb.documents.MongoDocumentResponse;
+	import jmcnet.mongodb.driver.EventMongoDB;
 	import jmcnet.mongodb.driver.JMCNetMongoDBDriver;
 	import jmcnet.mongodb.driver.MongoResponder;
 	import jmcnet.mongodb.messages.interpreter.BasicResponseInterpreter;
@@ -75,25 +77,73 @@ package jmcnet.mongodb.messages
 			}
 		}
 		
+		private var _nbFetchToReceive:uint=0;
+		private var _fetchError:Boolean=false;
+		private var _reponse:MongoDocumentResponse = null;
+		private var _dbRefInError:DBRef = null;
+		
 		private function interpretAndCallCallback():void {
-			var reponse:MongoDocumentResponse = null;
 			if (_responder != null) {
-				reponse = _responder.responseInterpreter.decodeDriverReturn(_responseLength, _response, _socket);
-				log.evt("Received complete response on socket #"+_socket.id+" :  response='"+reponse.toString()+"'");
+				_reponse = _responder.responseInterpreter.decodeDriverReturn(_responseLength, _response, _socket);
+				log.evt("Received complete response on socket #"+_socket.id+" :  response='"+_reponse.toString()+"'");
 				// If there is no error callback but there is a normal callback, call the normal callback
-				if (reponse.isOk) {
-					if (MongoDocument.logDocument) log.debug("Calling callback result method of responder");
-					_responder.result(reponse);
+				if (_reponse.isOk) {
+					if (MongoDocument.logDocument) log.debug("responder.fetchDbRef="+_responder.fetchDBRef+" maxDBRefDepth="+JMCNetMongoDBDriver.maxDBRefDepth);
+					// Check if we need to fetch something
+					if (_reponse.documents != null && _reponse.documents.length > 0 &&
+						JMCNetMongoDBDriver.maxDBRefDepth > 0 &&
+						_responder.fetchDBRef) {
+						if (MongoDocument.logDocument) log.debug("Fetching the docs in response");
+						_nbFetchToReceive = _reponse.documents.length;
+						_fetchError = false;
+						for each (var doc:MongoDocument in _reponse.documents) {
+							doc.addEventListener(MongoDocument.EVENT_DOCUMENT_FETCH_COMPLETE, onFetchComplete);
+							doc.addEventListener(MongoDocument.EVENT_DOCUMENT_FETCH_ERROR, onFetchError);
+							doc.fetchDBRef();
+						}
+					}
+					else {
+						if (MongoDocument.logDocument) log.debug("Nothing to fetch. Calling callback result method of responder");
+						_responder.result(_reponse);
+					}
 				}
 				else {
 					if (MongoDocument.logDocument) log.debug("Calling callback error method of responder");
-					_responder.fault(reponse);
+					_responder.fault(_reponse);
 				}
 			}
 			else {
-				reponse = new BasicResponseInterpreter().decodeDriverReturn(_responseLength, _response, _socket);
-				log.evt("onDataReceived with no responder : Received complete response : "+reponse.toString()+" on socket #"+_socket.id);
+				_reponse = new BasicResponseInterpreter().decodeDriverReturn(_responseLength, _response, _socket);
+				log.evt("onDataReceived with no responder : Received complete response : "+_reponse.toString()+" on socket #"+_socket.id);
 			}
+		}
+		
+		private function onFetchComplete(event:EventMongoDB):void {
+			if (MongoDocument.logDocument) log.debug("Calling onFetchComplete");
+			_nbFetchToReceive--;
+			if (_nbFetchToReceive <= 0) {
+				if (_fetchError) {
+					var msg:String="DBRef Fetching error : almost one of the DBRef could not be deferenced.";
+					if (_dbRefInError != null) msg += " Last DBRef in error : "+_dbRefInError.toString();
+					if (MongoDocument.logDocument) log.debug("Calling callback error method of responder");
+					_responder.fault(MongoDocumentResponse.createErrorResponse(msg, _socket));
+				}
+				else {
+					if (MongoDocument.logDocument) log.debug("All fetch are compelte -> calling callback result method of responder");
+					_responder.result(_reponse);
+				}
+			}
+			if (MongoDocument.logDocument) log.debug("EndOf onFetchComplete");
+		}
+		
+		private function onFetchError(event:EventMongoDB):void {
+			log.error("Calling onFetchError");
+			_fetchError = true;
+			if (event.result != null && event.result is DBRef) {
+				_dbRefInError = event.result as DBRef;
+			}
+			onFetchComplete(event);
+			log.error("EndOf onFetchError");
 		}
 		
 		private function onError(event:Event):void {
