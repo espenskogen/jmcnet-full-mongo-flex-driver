@@ -1,0 +1,8 @@
+#summary Le DBRef
+
+= Introduction =
+
+
+= Details =
+
+Mon détail.
