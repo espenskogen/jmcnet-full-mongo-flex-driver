@@ -22,18 +22,21 @@ package jmcnet.mongodb.driver
 		private var _onResult:Function = null;
 		private var _onError:Function = null;
 		private var _responseInterpreter:MongoResponseInterpreterInterface = null;
+		private var _fetchDBRef:Boolean = false;
 		
 		/**
 		 * Construct a new MongoResponder.
 		 * @param onResult:Function : the callback called when a response is ready. The callback signature must be callback(response:MongoDocumentResponse, token:*)
 		 * @param onError:Function : the callback called when a error is thrown while communicating with the server. The callback signature must be callback(event:Event, token:*)
 		 * @param token:* : any object that will be passed to callback.
+		 * @param fetchDBRef:Boolean If true DBRefs in repsonse will be fetched. Default value is true (ie DBRefs will be fetched)
 		 */
-		public function MongoResponder(onResult:Function, onError:Function=null, token:*=null) {
-			log.debug("CTOR onResult="+onResult+" onError="+onError+" token="+token);
+		public function MongoResponder(onResult:Function, onError:Function=null, token:*=null, fetchDBRef:Boolean=true) {
+			log.debug("CTOR onResult="+onResult+" onError="+onError+" token="+token+" fetchDBRef="+fetchDBRef);
 			this._onResult = onResult;
 			this._onError = onError;
 			this.token = token;
+			this._fetchDBRef = fetchDBRef;
 			_responseInterpreter = new BasicResponseInterpreter();
 		}
 		
@@ -61,5 +64,6 @@ package jmcnet.mongodb.driver
 		public function get responseInterpreter():MongoResponseInterpreterInterface {	return _responseInterpreter; }
 		public function set responseInterpreter(value:MongoResponseInterpreterInterface):void { _responseInterpreter = value;	}
 
+		public function get fetchDBRef():Boolean{ return _fetchDBRef; }
 	}
 }

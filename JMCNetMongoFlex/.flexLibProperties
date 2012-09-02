@@ -4,6 +4,7 @@
     <classEntry path="jmcnet.mongodb.driver.MongoResponder"/>
     <classEntry path="jmcnet.mongodb.messages.interpreter.MongoResponseInterpreterInterface"/>
     <classEntry path="jmcnet.mongodb.messages.interpreter.BasicResponseInterpreter"/>
+    <classEntry path="jmcnet.mongodb.documents.DBRef"/>
   </includeClasses>
   <includeResources/>
   <namespaceManifests/>

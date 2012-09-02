@@ -8,6 +8,7 @@ package jmcnet.mongodb.bson
 	import jmcnet.libcommun.communs.helpers.HelperClass;
 	import jmcnet.libcommun.communs.structures.HashTable;
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
+	import jmcnet.mongodb.documents.DBRef;
 	import jmcnet.mongodb.documents.JavaScriptCode;
 	import jmcnet.mongodb.documents.JavaScriptCodeScoped;
 	import jmcnet.mongodb.documents.MongoDocument;
@@ -134,6 +135,9 @@ package jmcnet.mongodb.bson
 			} else if ( value is JavaScriptCode && value != null ) {
 				if (logBSON) log.debug("Encoding of JavaScriptCode");
 				ba.writeBytes(convertJavaScriptCode(value as JavaScriptCode, attrName));
+			} else if ( value is DBRef && value != null ) {
+				if (logBSON) log.debug("Encoding a DBRef");
+				ba.writeBytes(convertDBRef(value as DBRef, attrName));
 			} else if ( value is Object && value != null ) {
 				if (logBSON) log.debug("Encoding of Object");
 				ba.writeBytes(convertObject(value, attrName));
@@ -391,6 +395,13 @@ package jmcnet.mongodb.bson
 			}
 			
 			if (logBSON) log.debug("End of convertMongoDocument result='"+HelperByteArray.byteArrayToString(ba)+"'");
+			return ba;
+		}
+		
+		public static function convertDBRef( value:DBRef, attrName:String) : ByteArray {
+			if (logBSON) log.debug("Calling convertDBRef value="+ObjectUtil.toString(value)+" attrName="+attrName);
+			var ba:ByteArray = convertMongoDocument(value.toMongoDocument(), attrName);
+			if (logBSON) log.debug("End of convertDBRef result='"+HelperByteArray.byteArrayToString(ba)+"'");
 			return ba;
 		}
 		

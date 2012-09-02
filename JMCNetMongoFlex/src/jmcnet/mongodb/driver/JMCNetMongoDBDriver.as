@@ -7,6 +7,7 @@ package jmcnet.mongodb.driver
 	import flash.utils.getQualifiedClassName;
 	
 	import jmcnet.libcommun.communs.structures.FifoStack;
+	import jmcnet.libcommun.communs.structures.HashTable;
 	import jmcnet.libcommun.logger.JMCNetLog4JLogger;
 	import jmcnet.libcommun.security.MD5;
 	import jmcnet.libcommun.socketpool.EventSocketPool;
@@ -82,9 +83,13 @@ package jmcnet.mongodb.driver
 		 */
 		public var logDocument:Boolean=false;
 		/**
-		 * Fine debug level for MongoDocument* manipulation
+		 * Fine debug level for MongoDocument manipulation
 		 */
 		public var logBSON:Boolean=false;
+		/**
+		 * Fine debug level for Socket manipulation
+		 */
+		public var logSocketPool:Boolean=false;
 		
 		// The socket pool
 		private var _pool:SocketPoolAuthenticated;
@@ -92,6 +97,9 @@ package jmcnet.mongodb.driver
 		// The waiting for pool commands
 		[ArrayElementType("jmcnet.mongodb.messages.MongoMsgAbstract")]
 		private var _awaitingMessages:FifoStack = new FifoStack();
+		
+		// The list of drivers instanciated stored by databaseName
+		private static var _lstDrivers:HashTable = new HashTable();
 		
 		// Safe Mode parameters
 		public static const SAFE_MODE_MAJORITY:int=-2;
@@ -115,6 +123,9 @@ package jmcnet.mongodb.driver
 		private var _lastErrorDoc:MongoDocument;
 		private var _firstAuthenticationError:Boolean = true;
 		
+		// The depth max for fetching DBRef
+		private static var _maxDBRefDepth:uint=0;
+		
 		private static var log:JMCNetLog4JLogger = JMCNetLog4JLogger.getLogger(JMCNetMongoDBDriver);
 		
 		/**
@@ -131,22 +142,27 @@ package jmcnet.mongodb.driver
 		 *   - password : the password in authenticate mode. 
 		 */
 		public function JMCNetMongoDBDriver() {
+			log.info("CTOR databaseName="+databaseName);
 			setWriteConcern();
 		}
 		
 		/**
-		 * Connect to MongoDB. If username and password are supplied, each connection try to authenticated.
+		 * Connect to MongoDB and register the driver for the databaseName. If username and password are supplied, each connection try to authenticated.
 		 */
 		public function connect(username:String=null, password:String=null):void {
 			if (username != null) this.username = username;
 			if (password != null) this.password = password;
 			
-			log.info("connect username="+this.username+" password="+(this.password == null ? "null":"xxxxxxxx"));
+			log.info("databaseName="+databaseName+" connect username="+this.username+" password="+(this.password == null ? "null":"xxxxxxxx"));
+			
+			// register driver
+			registerDriver();
 			
 			log.debug("logBSON="+logBSON+" logDocument="+logDocument);
 			BSONEncoder.logBSON = logBSON;
 			BSONDecoder.logBSON = logBSON;
 			MongoDocument.logDocument = logDocument;
+			SocketPool.logSocketPool = logSocketPool;
 			
 			if (_pool == null) _pool = new SocketPoolAuthenticated(socketPoolMin, socketPoolMax, socketTimeOutMs);
 			_pool.addEventListener(SocketPool.EVENT_POOL_DISCONNECTED,onPoolClose);
@@ -160,6 +176,34 @@ package jmcnet.mongodb.driver
 				_pool.connect(hostname, port);
 			}
 			
+		}
+		
+		private function registerDriver():void {
+			JMCNetMongoDBDriver._lstDrivers.addItem(databaseName, this);
+		}
+		
+		/**
+		 * Find a driver in the list of connected driver. If databaseName is null, the first driver in the list is returned (usefull for mono-driver applications)
+		 * @param databaseName (String) : the name of the database's driver to find or null to return the first one.
+		 * @return driver The JMCNetMongoDBDriver corresponding to databaseName or the first if databaseName is null
+		 * @throws ExceptionJMCNetMongoDB if no driver if found for databaseName provided
+		 */
+		public static function findDriver(databaseName:String=null):JMCNetMongoDBDriver {
+			log.debug("Calling findDriver databaseName="+databaseName);
+			var ret:JMCNetMongoDBDriver=null;
+			if (databaseName == null && _lstDrivers.length > 0) {
+				ret = _lstDrivers.getItemAt(0);
+			}
+			else {
+				ret = _lstDrivers.getItem(databaseName);
+			}
+			
+			if (ret == null) {
+				throw new ExceptionJMCNetMongoDB("Error : driver for databaseName='"+databaseName+"' unknown. Notice that drivers are unknown until there are not connected for first time. See connect()");
+			}
+			
+			log.debug("EndOf driver="+ret);
+			return ret;
 		}
 		
 		/**
@@ -348,7 +392,7 @@ package jmcnet.mongodb.driver
 		}
 		
 		private function prepareQuery(collectionName:String, query:MongoDocumentQuery, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):MongoMsgQuery {
-			log.info("Calling prepareQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			log.debug("Calling prepareQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 			var flags:uint = tailableCursor ? 2:0 +
 				slaveOk ? 4:0 +
 				noCursorTimeout ? 16:0 +
@@ -360,6 +404,7 @@ package jmcnet.mongodb.driver
 			msg.query = query;
 			msg.returnFieldsSelector = returnFields;
 
+			log.debug("EndOf prepareQuery");
 			return msg;
 		}
 		
@@ -739,11 +784,31 @@ package jmcnet.mongodb.driver
 				sendMessageToSocket(msg, socket);
 			}
 			else {
-				log.debug("There is no more available socket. We have to wait ...");
+				log.info("There is no more available socket. We have to wait ...");
 				_awaitingMessages.push(msg);
 			}
 			
 			log.debug("End of prepareMsgForSending awaitingMessages.length="+_awaitingMessages.length);
 		}
+		
+		override public function toString():String {
+			return "[JMCNetMongoDBDriver databaseName="+databaseName+" connected="+isConnecte()+"]";
+		}
+		
+		/**
+		 * returns the max depth when fetching nested DBRef. This applis to all drivers.
+		 * - 0 means that driver won't try to deference automatically DBRefs.
+		 * - 1 means that only the first level of DBRef are fetched. 
+		 * @return uint
+		 */   
+		public static function get maxDBRefDepth():uint { return JMCNetMongoDBDriver._maxDBRefDepth; }
+		
+		/**
+		 * Sets the max depth when fetching nested DBRef. This applis to all drivers.
+		 * - 0 means that driver won't try to deference automatically DBRefs.
+		 * - 1 means that only the first level of DBRef are fetched. 
+		 * @return uint
+		 */
+		public static function set maxDBRefDepth(maxDBRefDepth:uint):void { JMCNetMongoDBDriver._maxDBRefDepth = maxDBRefDepth; }
 	}
 }
