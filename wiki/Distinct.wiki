@@ -29,16 +29,19 @@ mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", new Mongo
 
 ...
 private function onResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
-	// < 1.4 syntax
+	// with 1.4 syntax
 	if (responseDoc.numberReturned == 1) {
-		// tabVal is the distinct values
-		var tabVal:Array = responseDoc.getDocument(0).getValue("values");
+		for each (var doc:MongoDocument in responseDoc.getDocument(0).getValue("values")) {
+			// do something with doc
+		}
 	}
 	
-	// 2.0 syntax
-	if (responseDoc.isOk) {
-		// values are directly here as Object
-		responseDoc.interpretedResponse[] ;
+	// With 2.0 syntax
+	if (responDoc.isOk) {
+		for each (var doc:Object in responseDoc.interpretedResponse) {
+			// do something with doc
+		}
+	}	
 }
 
 }}}
