@@ -72,6 +72,6 @@ public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
   * [CollectionManipulation Collection manipulation] (create, drop),
   * [SendingCommand Running commands],
   * [CRUD] (Create, Retrieve, Update, Delete),
-  * [Query] (Find, FindOne, getMore, killCursor).
+  * [Query] (Find, !FindOne, getMore, killCursor).
 
 <g:plusone size="medium"></g:plusone> 
