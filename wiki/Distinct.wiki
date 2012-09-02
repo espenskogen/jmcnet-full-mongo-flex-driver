@@ -15,7 +15,7 @@ In order to retrieve some distinct values on a query you must use the _distinct_
  * @param collectionName (String) : the name of the collection to query from,
  * @param key (String) : the key used to distinct documents,
  * @param query (MongoDocument) : the conditions document,
- * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+ * @param responder (MongoResponder) : the callback called when documents are ready to read. Default value is null,
  */
 public function distinct(collectionName:String, key:String, query:MongoDocument=null, responder:MongoResponder = null):void
 }}}
@@ -25,14 +25,20 @@ The result of the distinct command is a _MongoDocumentResponse_ and is passed to
 Example :
 {{{
 // Retrieve distinct attrString key value in a collection
-mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", new MongoDocument(), onResponseReceived); 
+mongoDriver.distinct(Constantes.documentsCollectionName, "attrString", new MongoDocument(), new MongoResponder(onResponseReceived)); 
 
 ...
-private function onResponseReceived(responseDoc:MongoDocumentResponse):void {
+private function onResponseReceived(responseDoc:MongoDocumentResponse, token:*):void {
+	// < 1.4 syntax
 	if (responseDoc.numberReturned == 1) {
 		// tabVal is the distinct values
 		var tabVal:Array = responseDoc.getDocument(0).getValue("values");
 	}
+	
+	// 2.0 syntax
+	if (responseDoc.isOk) {
+		// values are directly here as Object
+		responseDoc.interpretedResponse[] ;
 }
 
 }}}
