@@ -1,5 +1,5 @@
 #summary How to use the new (2.2) aggregation framework
-#labels Phase-Implementation
+#labels Phase-Implementation,Featured
 
 <wiki:toc max_depth="3" />
 

@@ -45,8 +45,8 @@ log.error("Debug message");
 ...
 }}}
 
-== FlexUnit facility for JMCNetMongoDBDriver ==
-For people who want to do some unit testing with this driver you can use this class _MongoBaseFlexUnitTest_ as base class for FlexUnit test class.
+== !FlexUnit facility for JMCNetMongoDBDriver ==
+For people who want to do some unit testing with this driver you can use this class _!MongoBaseFlexUnitTest_ as base class for !FlexUnit test class.
 This provide :
   # Automatic connection on startup,
   # Automatic cleaning of test collection,
@@ -88,7 +88,7 @@ public class MongoDBRefTest extends MongoBaseFlexUnitTest
 }
 }}}
 
-The base test class is not incorporated in the driver's swc not to force people to link with FlexUnit, but you can find it [http://code.google.com/p/jmcnet-full-mongo-flex-driver/source/browse/#svn%2Ftrunk%2FJMCNetMongoFlex_Test%2Fsrc here].
+The base test class is not incorporated in the driver's swc not to force people to link with !FlexUnit, but you can find it [http://code.google.com/p/jmcnet-full-mongo-flex-driver/source/browse/#svn%2Ftrunk%2FJMCNetMongoFlex_Test%2Fsrc here].
 Feel free to checkout it in your environment.
 
 = See also =
