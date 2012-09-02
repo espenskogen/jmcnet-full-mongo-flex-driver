@@ -7,8 +7,8 @@
 
 This page will explain, how to modify your code between driver's release.
 
-= Prior 1.5 to 1.5 =
-1.5 release adds the Responder capabilities to driver.
+= Prior 1.4 to 2.0 =
+2.0 release adds the Responder capabilities to driver.
 
 You just need to transform this kind of call :
 {{{
