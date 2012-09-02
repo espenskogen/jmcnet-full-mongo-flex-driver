@@ -464,6 +464,8 @@ package jmcnet.mongodb.documents
 		 * Find all DBRef values and fetch them until the depth of research max in found (for circular reference inhibition).
 		 * The EVENT_FETCH_COMPLETE is send after completion.
 		 * @param maxDBRefDepth int. the max depth when fetching nested DBRef. -1 means that value is taken from driver.
+		 * @event EVENT_FETCH_COMPLETE is send after completion.
+		 * @event EVENT_FETCH_ERROR is send after fetching in error.
 		 * @see JMCNetMongoDBDriver.maxDBRefDepth 
 		 */
 		public function fetchDBRef(maxDBRefDepth:int=-1):void {
@@ -555,10 +557,6 @@ package jmcnet.mongodb.documents
 		
 		private function verifyNbDBRefAndDispatchEvent(depth:uint):void {
 			if (logDocument) log.debug("Calling verifyNbDBRefAndDispatchEvent depth="+depth+" nbDbRef="+_nbDbRef+" success="+_success);
-//			if (depth > 0) {
-//				if (logDocument) log.debug("verifyNbDBRefAndDispatchEvent :  we are not at top level -> Don't dispatch anything");
-//				return ;
-//			}
 			if (_nbDbRef <= 0) {
 				if (_success) {
 					log.evt("Dispatching EVENT_DOCUMENT_FETCH_COMPLETE. All DBRef fetch in document:"+toString()+" are successfully complete.");

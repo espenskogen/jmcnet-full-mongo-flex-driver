@@ -369,7 +369,7 @@ package jmcnet.mongodb.driver
 		 * Query documents (ie. find, findOne, find.skip, find.limit).
 		 * @param collectionName (String) : the name of the collection to query from,
 		 * @param query (MongoDocumentQuery) : the query document,
-		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param responder (MongoResponder) : the callback called when documents are ready to read. Default value is null,
 		 * @param returnFields (MongoDocument) : list of field included in the response. Default is null (all fields are returned),
 		 * @param numberToSkip (uint) : number of docs to skip. Usefull for pagination. Default is 0,
 		 * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number),
@@ -437,6 +437,7 @@ package jmcnet.mongodb.driver
 		 * Send a command to the database. A command has no result in return.
 		 * @param command (MongoDocument) : the command,
 		 * @param responder (Responder) : the responder called with command's results.
+		 * @param interpreter (MongoResponseInterpreter) : a interpretor class which exploit the result a transform this in MongoDocumentResponse.interpretedResponse object.
 		 */
 		public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
 			log.info("Calling runCommand command="+command.toString()+" responder="+responder);
@@ -591,7 +592,7 @@ package jmcnet.mongodb.driver
 		 * @param collectionName (String) : the name of the collection to query from,
 		 * @param key (String) : the key used to distinct documents,
 		 * @param query (MongoDocument) : the conditions document,
-		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
+		 * @param responder (MongoResponder) : the callback called when documents are ready to read. Default value is null,
 		 */
 		public function distinct(collectionName:String, key:String, query:MongoDocument=null, responder:MongoResponder=null):void {
 			log.info("Calling distinct collectionName="+collectionName+" key="+key+" responder="+responder);
@@ -668,9 +669,9 @@ package jmcnet.mongodb.driver
 		/**
 		 * Do aggregation on documents. More on aggregation framework can be found on the MongoDB Documentation.
 		 * @param collectionName (String) : the name of the collection to query from,
-		 * @param pipeline (MongoDocumentAggregationPipeline) : the pipeline of aggregation command. See MongoDocumentAggregationPipeline
+		 * @param pipeline (MongoAggregationPipeline) : the pipeline of aggregation command. See MongoAggregationPipeline
 		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
-		 * 
+		 * @see MongoAggregationPipeline
 		 */
 		public function aggregate(collectionName:String, pipeline:MongoAggregationPipeline, responder:MongoResponder=null):void {
 			log.info("Calling aggregate collectionName="+collectionName+" pipeline="+pipeline+" responder="+responder);
