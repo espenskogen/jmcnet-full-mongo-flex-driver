@@ -33,10 +33,6 @@ package jmcnet.mongodb.documents
 		
 		public function MongoAggregationPipeline()	{ }
 		
-		public function addProject():MongoAggregationPipeline {
-			return this;
-		}
-		
 		/**
 		 * Gets the array of aggregation operators
 		 * @return Array of MongoDocument. Each MongoDocument contains an aggregation's operator in the order of insertion

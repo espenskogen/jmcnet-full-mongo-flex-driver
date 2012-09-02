@@ -10,7 +10,8 @@ package jmcnet.mongodb.documents
 	
 	/**
 	 * A class representing a database reference attribute.
-	 * @event EVENT_FETCH_COMPLETE dispatched when the fetch operation is complete for this DBRef
+	 * @event EVENT_DBREF_FETCH_COMPLETE dispatched when the fetch operation is complete for this DBRef
+	 * @event EVENT_DBREF_FETCH_ERROR dispatched when the fetch operation is in error.
 	 */
 	[Event(name=EVENT_FETCH_COMPLETE, type="jmcnet.mongodb.driver.EventMongoDB")]
 	[Event(name=EVENT_FETCH_ERROR, type="jmcnet.mongodb.driver.EventMongoDB")]
@@ -33,20 +34,23 @@ package jmcnet.mongodb.documents
 		/**
 		 * Construct a new DBRef. if databaseName is null this mean, in the current database (use it only if you are mono databaseName).
 		 * @param collectionName (String) The name of the collection to search in. Equivalent to $ref parameter in DBRef
-		 * @param id (OBjectID or String) The id of object to search. Equivalent to $id parameter in DBRef
+		 * @param id (ObjectID or String) The id of object to search. Equivalent to $id parameter in DBRef. If String, ObjectID.createFromString is called to set the $id attribute.
 		 * @param databaseName (String) The name of the database to search in. Equivalent to $db parameter in DBRef. If null, suppose to search in the only open database.
 		 */
 		public function DBRef(collectionName:String, id:Object, databaseName:String=null) {
 			log.debug("CTOR collectionName="+collectionName+" id="+id+" databaseName="+databaseName);
 			_collectionName = collectionName;
-			if (id is ObjectID) _id = id as ObjectID;
-			else _id = ObjectID.createFromString(id.toString());
+			setId(id);
 			_databaseName = databaseName;
 		}
 		
 		/**
-		 * Retrieve the value of the DBRef and store it.
+		 * Retrieve the value of the DBRef and store it. If this operation is successfull, value and documentValue are set.
 		 * @throws ExceptionJMCNetMongoDB if no driver if found for databaseName of this DBRef
+		 * @event EVENT_DBREF_FETCH_COMPLETE dispatched when the fetch operation is complete for this DBRef
+		 * @event EVENT_DBREF_FETCH_ERROR dispatched when the fetch operation is in error.
+		 * @see value The Object object representing the referenced doc
+		 * @see documentValue The MongoDocument object representing the referenced doc
 		 */
 		public function fetch():void {
 			log.info("Calling fetch dbref="+toString());
@@ -85,12 +89,19 @@ package jmcnet.mongodb.documents
 			log.info("EndOf onFetchError dbref="+toString());
 		}
 		
+		/**
+		 * Convert a DBRef into a MongoDocument document containing $ref, $id and optionnaly $db attribute.
+		 * @return MongoDocument
+		 */
 		public function toMongoDocument():MongoDocument {
 			var ret:MongoDocument = new MongoDocument("$ref", _collectionName).addKeyValuePair("$id", _id);
 			if (_databaseName != null) ret.addKeyValuePair("$db", _databaseName);
 			return ret;
 		}
 		
+		/**
+		 * A debug string representing the DBRef.
+		 */
 		override public function toString():String {
 			var ret:String="DBRef($ref : "+_collectionName+", $id : "+_id;
 			if (_databaseName != null) ret += ", $db : "+_databaseName;
@@ -103,12 +114,28 @@ package jmcnet.mongodb.documents
 		public function set collectionName(value:String):void {	_collectionName = value; }
 
 		public function get id():ObjectID {	return _id;	}
-		public function set id(value:ObjectID):void { _id = value; }
+		public function set id(id:ObjectID):void {
+			id = id;
+		}
+		
+		public function setId(id:Object):void {
+			if (id is ObjectID) _id = id as ObjectID;
+			else _id = ObjectID.createFromString(id.toString());
+		}
 
 		public function get databaseName():String {	return _databaseName; }
 		public function set databaseName(value:String):void	{ _databaseName = value; }
 
+		/**
+		 * The value when this DBRef has been fetched (else it is null).
+		 * @return Object A generic Object containing the value deferenced or null if fetch has not been called with success.
+		 */
 		public function get value():Object { return _value;	}
+		
+		/**
+		 * The MongoDocument value when this DBRef has been fetched (else it is null).
+		 * @return MongoDocument A MongoDocument object containing the value deferenced or null if fetch has not been called with success.
+		 */
 		public function get documentValue():MongoDocument { return _documentValue;	}
 
 		/**

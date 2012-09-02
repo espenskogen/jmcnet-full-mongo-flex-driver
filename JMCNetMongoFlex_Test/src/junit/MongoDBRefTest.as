@@ -555,6 +555,66 @@ package junit
 			assertFalse(rep.isOk);
 			
 			log.info("EndOf onResponseReceivedFetchDocError");
-		}		
+		}
+		
+		[Test(async, timeout=5000)]
+		public function testFetchDocErrorManually():void {
+			log.info("------\nCalling testFetchDocErrorManually");
+			
+			// Don't fetch automatically
+			JMCNetMongoDBDriver.maxDBRefDepth = 0;
+			
+			// Test principle : 3 docs. doc1.doc2ref=DBRef on doc2, doc2.doc3ref = DBRef on doc3, doc3.docRefs[ DBRef on doc1, and doc2], doc3.doc1ref = DBRef on doc1 (circular reference) 
+			doc1.doc2Ref = new DBRef("testu2", doc2._id);
+			doc2.doc3Ref = new DBRef("testu2", doc3._id);
+			doc3.doc1Ref = new DBRef("testu", ObjectID.createFromString("doesn't exists"));
+			
+			driver.dropCollection("testu2");
+			driver.insertDoc("testu", [doc1], new MongoResponder(onInsertFetchDocErrorManually));
+			driver.insertDoc("testu2", [doc2, doc3], new MongoResponder(onInsertFetchDocErrorManually));
+			driver.queryDoc(
+				"testu",
+				new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
+				new MongoResponder(onResponseReceivedFetchDocErrorManuallyOK, onResponseReceivedFetchDocErrorManuallyError));
+			
+			// Wait a sec for test to finish
+			waitOneSecond();
+			log.info("EndOf testFetchDocErrorManually");
+		}
+		
+		public function onInsertFetchDocErrorManually(response:MongoDocumentResponse, token:*):void {
+			log.info("Calling onInsertFetchDocErrorManually");
+			// must not be called because, SAFE_MODE is normal and insertDoc don't have any result
+			fail("Callback on insertDoc should not be called because safeMode is NORMAL.");
+		}
+		
+		
+		public function onResponseReceivedFetchDocErrorManuallyOK(rep:MongoDocumentResponse, token:*):void {
+			log.info("Calling onResponseReceivedFetchDocErrorManuallyOK responseDoc="+rep+" token="+token);
+			// Fetch the doc
+			var repDoc:MongoDocument = rep.documents[0];
+			Async.failOnEvent(this, repDoc, MongoDocument.EVENT_DOCUMENT_FETCH_COMPLETE);
+			repDoc.addEventListener(MongoDocument.EVENT_DOCUMENT_FETCH_ERROR, onFetchDocError);
+			repDoc.fetchDBRef(3);
+		}
+		
+		// This should not be called because fetching is not automatic
+		public function onResponseReceivedFetchDocErrorManuallyError(rep:MongoDocumentResponse, token:*):void {
+			log.info("Calling onResponseReceivedFetchDocErrorManuallyError responseDoc="+rep+" token="+token);
+			
+			fail("This method should not be called because manual fetching");
+			
+			log.info("EndOf onResponseReceivedFetchDocErrorManually");
+		}
+		
+		// This should not be called because fetching is not automatic
+		public function onFetchDocError(event:EventMongoDB):void {
+			log.info("Calling onFetchDocError event="+event.toString());
+			
+			// Normal to be here ...
+			assertTrue(true);
+			
+			log.info("EndOf onFetchDocError");
+		}	
 	}
 }
