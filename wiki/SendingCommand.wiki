@@ -10,17 +10,21 @@ This page will explain, how to send commands to the database.
 
 Sending command is done by the following method of the driver :
 {{{
-public function runCommand(command:MongoDocument, responder:MongoResponder=null ):void
+/**
+ * Send a command to the database. A command has no result in return.
+ * @param command (MongoDocument) : the command,
+ * @param responder (Responder) : the responder called with command's results.
+ * @param interpreter (MongoResponseInterpreter) : a interpretor class which exploit the result a transform this in MongoDocumentResponse.interpretedResponse object.
+ */
+public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void
 }}}
-
-The parameters are the following :
-  * command (MongoDocument) : the command,
-  * responder (MongoResponder) : the responder holding the callback called with command's results.
 
 If provided, callback must have the following signature :
 {{{
 private function onResponseRunCommandReady (response:MongoDocumentResponse, token:*):void
 }}}
+
+If an _interpreter_ class is not provided, the driver uses a basic interpretor which just transform the response in generic object. This generic result is available in MongoDocumentResponse.interpretedResponse.  
 
 == Default callback response for command ==
 A more convenient way to catch command response is to add a listener to the driver. Then all _runCommand_ call without callback provided will call the listener.
