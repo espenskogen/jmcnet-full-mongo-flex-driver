@@ -6,7 +6,7 @@
 = Introduction =
 
 This page will explain, how to use the new aggregation framework. More explanations can be found @ MongoDB documentation [http://docs.mongodb.org/manual/reference/aggregation/ here]
-*Note :* all operators and expressions are supported by the driver. Some expressions are available in the _MongoDocument_ class.
+*Note :* all operators and expressions are supported by the driver. Some expressions are available in the _!MongoDocument_ class.
 
 = Details =
 To use the aggregation you must use the _aggregate_ method of the driver. The _aggregate_ method of the driver has the following signature :
