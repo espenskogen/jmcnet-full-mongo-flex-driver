@@ -74,7 +74,7 @@ If safeMode is SAFE_MODE_NONE or SAFE_MODE_NORMAL, some commands will never have
 
 This table synthetize the command's and type of returns depending on safeMode :
 || *Command* || *Type of returns in non safe mode* (SAFE_MODE_NONE, SAFE_MODE_NORMAL)|| *Type of returns in safe mode* (SAFE_MODE_SAFE, SAFE_MODE_REPLICAS_SAFE, SAFE_MODE_MAJORITY)||
-||insertDoc, updateDoc, deleteDoc, runCommand || none || getLastError returns depending on command ||
+||insertDoc, updateDoc, deleteDoc, runCommand || none (no callback called) || getLastError returns depending on command ||
 || queryDoc, getMoreDoc, killCursor, runQueryCommand || !MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
 || getLastError || getLastError returns depending on previous command || idem ||
 || createCollection, dropCollection, renameCollection || !MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
