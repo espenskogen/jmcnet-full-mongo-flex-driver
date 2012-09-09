@@ -73,14 +73,12 @@ When you set the safeMode in one of those value, all commands have an answer, an
 If safeMode is SAFE_MODE_NONE or SAFE_MODE_NORMAL, some commands will never have an answer and thus Responder's callback will never be called.
 
 This table synthetize the command's and type of returns depending on safeMode :
-||*Command*||*Type of returns in non safe mode* (SAFE_MODE_NONE, SAFE_MODE_NORMAL)||*Type of returns in safe mode* (SAFE_MODE_SAFE, SAFE_MODE_REPLICAS_SAFE, SAFE_MODE_MAJORITY)||
-||insertDoc, updateDoc, deleteDoc || none || getLastError returns ||
-|| queryDoc, getMoreDoc, runQueryCommand || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
-|| runCommand || none || getLastError returns ||
-|| getLastError || getLastError returns || idem ||
-|| killCursor || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
-|| createCollection, dropCollection, renameCollection || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
-|| count, distinct, group, mapReduce, aggregate  || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| *Command* || *Type of returns in non safe mode* (SAFE_MODE_NONE, SAFE_MODE_NORMAL)|| *Type of returns in safe mode* (SAFE_MODE_SAFE, SAFE_MODE_REPLICAS_SAFE, SAFE_MODE_MAJORITY)||
+||insertDoc, updateDoc, deleteDoc, runCommand || none || getLastError returns depending on command ||
+|| queryDoc, getMoreDoc, killCursor, runQueryCommand || !MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| getLastError || getLastError returns depending on previous command || idem ||
+|| createCollection, dropCollection, renameCollection || !MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| count, distinct, group, mapReduce, aggregate  || !MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
 
  
 
