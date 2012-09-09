@@ -45,6 +45,7 @@ package jmcnet.mongodb.driver
 	import jmcnet.mongodb.messages.interpreter.GroupResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.MapReduceResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.MongoResponseInterpreterInterface;
+	import jmcnet.mongodb.runner.AbstractRunner;
 	
 	import mx.utils.ObjectUtil;
 	
@@ -61,13 +62,13 @@ package jmcnet.mongodb.driver
 	 * @param logBSON (Boolean) : if true trace BSON encoding/decoding. Default value is false,
 	 * @param logDocument (Boolean) : if true trace all Document manipulation. Default value is false.
 	 */
-	[Event(name=EVT_CONNECTOK, type="newjmcnetds.EventMongoDB")] // dispatched when driver is connected and authenticated in auth mode
-	[Event(name=EVT_AUTH_ERROR, type="newjmcnetds.EventMongoDB")] // dispatched when authentication failed
-	[Event(name=EVT_CLOSE_CONNECTION, type="newjmcnetds.EventMongoDB")] // dispatched when all connection are closed
-	[Event(name=EVT_LAST_ERROR, type="newjmcnetds.EventMongoDB")]  // dispatched when a response to a getLastError command is received
-	[Event(name=EVT_RUN_COMMAND, type="newjmcnetds.EventMongoDB")] // dispatched when a response to a runCommand is received an no responder has been provided
-	[Event(name=EVT_RESPONSE_RECEIVED, type="newjmcnetds.EventMongoDB")] // dispatched when a response to a query is received an no responder has been provided
-	public class JMCNetMongoDBDriver extends EventDispatcher
+	[Event(name=EVT_CONNECTOK, type="jmcnet.mongodb.driver.EventMongoDB")] // dispatched when driver is connected and authenticated in auth mode
+	[Event(name=EVT_AUTH_ERROR, type="jmcnet.mongodb.driver.EventMongoDB")] // dispatched when authentication failed
+	[Event(name=EVT_CLOSE_CONNECTION, type="jmcnet.mongodb.driver.EventMongoDB")] // dispatched when all connection are closed
+	[Event(name=EVT_LAST_ERROR, type="jmcnet.mongodb.driver.EventMongoDB")]  // dispatched when a response to a getLastError command is received
+	[Event(name=EVT_RUN_COMMAND, type="jmcnet.mongodb.driver.EventMongoDB")] // dispatched when a response to a runCommand is received an no responder has been provided
+	[Event(name=EVT_RESPONSE_RECEIVED, type="jmcnet.mongodb.driver.EventMongoDB")] // dispatched when a response to a query is received an no responder has been provided
+	public class JMCNetMongoDBDriver extends AbstractRunner
 	{
 		public var hostname:String="";
 		public var port:uint=27017;
@@ -94,19 +95,15 @@ package jmcnet.mongodb.driver
 		// The socket pool
 		private var _pool:SocketPoolAuthenticated;
 		
-		// The waiting for pool commands
-		[ArrayElementType("jmcnet.mongodb.messages.MongoMsgAbstract")]
-		private var _awaitingMessages:FifoStack = new FifoStack();
-		
 		// The list of drivers instanciated stored by databaseName
 		private static var _lstDrivers:HashTable = new HashTable();
 		
 		// Safe Mode parameters
-		public static const SAFE_MODE_MAJORITY:int=-2;
 		public static const SAFE_MODE_NONE:int=-1;
 		public static const SAFE_MODE_NORMAL:int=0;
 		public static const SAFE_MODE_SAFE:int=1;
 		public static const SAFE_MODE_REPLICAS_SAFE:int=2;
+		public static const SAFE_MODE_MAJORITY:int=3;
 		
 		public static const EVT_CONNECTOK:String="connectOK";
 		public static const EVT_AUTH_ERROR:String="authenticationError";
@@ -114,7 +111,6 @@ package jmcnet.mongodb.driver
 		public static const EVT_LAST_ERROR:String="lastError";
 		public static const EVT_RUN_COMMAND:String="runCommand";
 		public static const EVT_RESPONSE_RECEIVED:String="responseReceived";
-		
 		
 		private var _w:int=0;
 		private var _wTimeOutMs:int=0;
@@ -142,6 +138,7 @@ package jmcnet.mongodb.driver
 		 *   - password : the password in authenticate mode. 
 		 */
 		public function JMCNetMongoDBDriver() {
+			super(this);
 			log.info("CTOR databaseName="+databaseName);
 			setWriteConcern();
 		}
@@ -202,7 +199,7 @@ package jmcnet.mongodb.driver
 				throw new ExceptionJMCNetMongoDB("Error : driver for databaseName='"+databaseName+"' unknown. Notice that drivers are unknown until there are not connected for first time. See connect()");
 			}
 			
-			log.debug("EndOf driver="+ret);
+			log.debug("EndOf findDriver driver="+ret);
 			return ret;
 		}
 		
@@ -216,7 +213,7 @@ package jmcnet.mongodb.driver
 			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(new MongoDocument("getnonce",1)), null, 0, 1);
 			msg.responder = new MongoResponder(onGetNonce, onErrorCallback);
 			
-			sendMessageToSocket(msg, socket);			
+			sendMessageToSocket(msg, socket);
 		}
 		
 		/**
@@ -244,7 +241,7 @@ package jmcnet.mongodb.driver
 			log.debug("pwd="+pwd);
 			var digest:String = MD5.encrypt(nonce + username +  pwd);
 			doc.addQueryCriteria("key", digest);
-			var msg:MongoMsgQuery = prepareQuery("$cmd", doc, null, 0, 1);
+			var msg:MongoMsgQuery = super.prepareQuery("$cmd", doc, null, 0, 1);
 			
 			msg.responder = new MongoResponder(onGetAuthentResponse, onErrorCallback);
 			
@@ -325,18 +322,18 @@ package jmcnet.mongodb.driver
 		private function onPoolClose(event:Event):void {
 			log.evt("Connection with MongoDB database has closed.");
 			this.dispatchEvent(new EventMongoDB(EVT_CLOSE_CONNECTION));
+			stop();
 		}
 		
 		/**
 		 * Called when the first active socket is open.
 		 */
 		private function onPoolOpen(event:Event):void {
-			log.evt("Connection with MongoDB database has opened.");
+			log.evt("Connection with MongoDB database has opened. Starting async runner...");
+			start();
+
 			// Call only in non auth mode. Else it is called when authentication succeed
 			this.dispatchEvent(new EventMongoDB(EVT_CONNECTOK));
-				
-			// We listen for available sockets in the pool
-			_pool.addEventListener(SocketPool.EVENT_FREE_SOCKET,onFreeSocket);
 		}
 		
 		/**
@@ -354,15 +351,10 @@ package jmcnet.mongodb.driver
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 * @param continueOnError (Boolean) : true if must continue when there is an error. Default value is false.
 		 */
-		public function insertDoc(collectionName:String, documents:Array, safeResponder:MongoResponder=null, continueOnError:Boolean=true):void {
+		override public function insertDoc(collectionName:String, documents:Array, safeResponder:MongoResponder=null, continueOnError:Boolean=true):void {
 			log.info("Calling insertDoc collectionName="+collectionName+" safeResponder="+safeResponder+" continueOnError="+continueOnError+" documents="+ObjectUtil.toString(documents)); 
-			
-			var msg:MongoMsgInsert = new MongoMsgInsert(databaseName, collectionName, continueOnError);
-			for each (var doc:Object in documents) {
-				msg.addDocument(doc);
-			}
-			
-			prepareMsgForSending(msg, safeResponder);
+			super.insertDoc(collectionName,documents,safeResponder,continueOnError);
+			log.info("EndOf insertDoc");
 		}
 		
 		/**
@@ -380,32 +372,13 @@ package jmcnet.mongodb.driver
 		 * @param exhaust (Boolean) : Stream the data down full blast in multiple "more" packages, on the assumption that the client will fully read all data queried. Faster when you are pulling a lot of data and know you want to pull it all down. Note: the client is not allowed to not read all the data unless it closes the connection.
 		 * @param partial (Boolean) : Get partial results from a mongos if some shards are down (instead of throwing an error) 
 		 * */
-		public function queryDoc(collectionName:String, query:MongoDocumentQuery, responder:MongoResponder=null, returnFields:MongoDocument=null,
+		override public function queryDoc(collectionName:String, query:MongoDocumentQuery, responder:MongoResponder=null, returnFields:MongoDocument=null,
 								 numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false,
 								 awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
-			log.info("Calling query collectionName="+collectionName+" query="+query.toString()+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
-
-			var msg:MongoMsgQuery = prepareQuery(collectionName, query, returnFields, numberToSkip, numberToReturn, tailableCursor, awaitData, exhaust, partial);
+			log.info("Calling queryDoc collectionName="+collectionName+" query="+query.toString()+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			super.queryDoc(collectionName,query,responder,returnFields, numberToSkip, numberToReturn, tailableCursor, slaveOk, noCursorTimeout, awaitData, exhaust, partial);
+			log.info("EndOf queryDoc");
 			
-			if (responder == null) responder = new MongoResponder(onResponseQueryReady);
-			prepareMsgForSending(msg, responder);
-		}
-		
-		private function prepareQuery(collectionName:String, query:MongoDocumentQuery, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):MongoMsgQuery {
-			log.debug("Calling prepareQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
-			var flags:uint = tailableCursor ? 2:0 +
-				slaveOk ? 4:0 +
-				noCursorTimeout ? 16:0 +
-				awaitData ? 32:0 +
-				exhaust ? 64:0 +
-				partial ? 128:0;
-			
-			var msg:MongoMsgQuery = new MongoMsgQuery(databaseName, collectionName, numberToSkip, numberToReturn, tailableCursor, slaveOk, noCursorTimeout, awaitData, exhaust, partial);
-			msg.query = query;
-			msg.returnFieldsSelector = returnFields;
-
-			log.debug("EndOf prepareQuery");
-			return msg;
 		}
 		
 		/**
@@ -415,22 +388,10 @@ package jmcnet.mongodb.driver
 		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
 		 * @param numberToReturn (uint) : number of docs to return. Usefull for pagination. Default is 0 (returns default documents number)
 		 */
-		public function getMoreDoc(collectionName:String, cursorID:Cursor, responder:MongoResponder=null, numberToReturn:int=0):void {
+		override public function getMoreDoc(collectionName:String, cursorID:Cursor, responder:MongoResponder=null, numberToReturn:int=0):void {
 			log.info("Calling getMore collectionName="+collectionName+" cursorID="+cursorID+" numberToReturn="+numberToReturn);
-			
-			var msg:MongoMsgGetMore = new MongoMsgGetMore(databaseName, collectionName, cursorID, numberToReturn);
-			
-			if (responder == null) responder = new MongoResponder(onResponseQueryReady);
-			prepareMsgForSending(msg, responder);
-		}
-		
-		/**
-		 * Default callback when not specified by user
-		 */
-		private function onResponseQueryReady (response:MongoDocumentResponse,token:*):void {
-			log.debug("Calling onResponseReady response="+response.toString()+" token="+token);
-			// Dispatch the answer
-			this.dispatchEvent(new EventMongoDB(EVT_RESPONSE_RECEIVED, response));
+			super.getMoreDoc(collectionName, cursorID, responder, numberToReturn);
+			log.info("EndOf getMore");
 		}
 		
 		/**
@@ -439,54 +400,31 @@ package jmcnet.mongodb.driver
 		 * @param responder (Responder) : the responder called with command's results.
 		 * @param interpreter (MongoResponseInterpreter) : a interpretor class which exploit the result a transform this in MongoDocumentResponse.interpretedResponse object.
 		 */
-		public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
+		override public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
 			log.info("Calling runCommand command="+command.toString()+" responder="+responder);
-			var msg:MongoMsgCmd = new MongoMsgCmd(databaseName);
-			msg.cmd = command;
-			
-			// Normally there is no answer... but in safe mode we could 
-			if (responder == null) responder = new MongoResponder(onResponseRunCommandReady);
-			if (interpreter == null) responder.responseInterpreter = new BasicResponseInterpreter();
-			else responder.responseInterpreter = interpreter;
-			
-			prepareMsgForSending(msg, responder);
+			super.runCommand(command, responder, interpreter);
 			log.info("EndOf runCommand");
 		}
 		
 		/**
-		 * Send a query command to the database. Query commands are commands which has a result.
+		 * Send a query command to the database. Query commands are commands which have a result.
 		 * @param command (MongoDocument) : the command,
 		 * @param responder (Responder) : the responder called with command's results.
 		 */
-		public function runQueryCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
+		override public function runQueryCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
 			log.info("Calling runQueryCommand command="+command.toString()+" responder="+responder);
-			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(command), null, 0, -1);
-			if (responder == null) responder = new MongoResponder(onResponseRunCommandReady);
-			if (interpreter == null) responder.responseInterpreter = new BasicResponseInterpreter();
-			else responder.responseInterpreter = interpreter;
-			
-			prepareMsgForSending(msg, responder);
+			super.runQueryCommand(command, responder, interpreter);
 			log.info("EndOf runQueryCommand");
-		}
-		
-		private function onResponseRunCommandReady (response:MongoDocumentResponse, token:*):void {
-			log.info("Calling onResponseRunCommandReady response="+response.toString()+" token="+token);
-			// Dispatch the answer
-			log.evt("Dispatching Run command event");
-			this.dispatchEvent(new EventMongoDB(EVT_RUN_COMMAND, response));
 		}
 		
 		/**
 		 * Call the getLastError method and return the result in the responder
 		 */
-		public function getLastError(responder:MongoResponder=null):void {
+		override public function getLastError(responder:MongoResponder=null):void {
 			log.info("Calling getLastError responder="+responder);
-			runQueryCommand(_lastErrorDoc, responder == null ? new MongoResponder(onResponseLastError):responder, new GetLastErrorResponseInterpreter());
-		}
-		
-		private function onResponseLastError(response:MongoDocumentResponse, token:*):void {
-			log.debug("Calling onResponseLastError response="+response.toString()+" token="+token);
-			this.dispatchEvent(new EventMongoDB(EVT_LAST_ERROR, response));
+			super.getLastError(responder);
+			log.info("EndOf getLastError");
+			
 		}
 		
 		/**
@@ -497,13 +435,10 @@ package jmcnet.mongodb.driver
 		 * @param upsert (Boolean) : if true can perform an insert if doc don't exists. Default value is false,
 		 * @param multiupdate (Boolean) : if true can perform update one more than one document. Default value is false,
 		 */
-		public function updateDoc(collectionName:String, update:MongoDocumentUpdate, safeResponder:MongoResponder= null, upsert:Boolean=false, multiUpdate:Boolean=false):void {
+		override public function updateDoc(collectionName:String, update:MongoDocumentUpdate, safeResponder:MongoResponder= null, upsert:Boolean=false, multiUpdate:Boolean=false):void {
 			log.info("Calling update collectionName="+collectionName+" safeResponder="+safeResponder+" update="+update+" upsert="+upsert+" multiUpdate="+multiUpdate);
-
-			var msg:MongoMsgUpdate = new MongoMsgUpdate(databaseName, collectionName, update, upsert, multiUpdate);
-			
-			// Write into socket
-			prepareMsgForSending(msg, safeResponder);
+			super.updateDoc(collectionName, update, safeResponder, upsert, multiUpdate);
+			log.info("EndOf updateDoc");
 		}
 		
 		/**
@@ -513,13 +448,10 @@ package jmcnet.mongodb.driver
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 * @param singleRemove (Boolean) : if true perform a single remove. Default value is false.
 		 */
-		public function deleteDoc(collectionName:String, doc:MongoDocumentDelete, safeResponder:MongoResponder= null, singleRemove:Boolean=false):void {
+		override public function deleteDoc(collectionName:String, doc:MongoDocumentDelete, safeResponder:MongoResponder= null, singleRemove:Boolean=false):void {
 			log.info("Calling deleteDoc collectionName="+collectionName+" safeResponder="+safeResponder+" deleteDoc="+doc+" singleRemove="+singleRemove);
-			
-			var msg:MongoMsgDelete = new MongoMsgDelete(databaseName, collectionName, doc, singleRemove);
-			
-			// Write into socket
-			prepareMsgForSending(msg, safeResponder);
+			super.deleteDoc(collectionName, doc, safeResponder, singleRemove);
+			log.info("EndOf deleteDoc");
 		}
 		
 		/**
@@ -527,13 +459,10 @@ package jmcnet.mongodb.driver
 		 * @param doc (MongoDocumentKillCursors) : the document containing the cursor(s) to kill,
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 */
-		public function killCursors(doc:MongoDocumentKillCursors, safeResponder:MongoResponder=null):void {
+		override public function killCursors(doc:MongoDocumentKillCursors, safeResponder:MongoResponder=null):void {
 			log.info("Calling killCursor safeResponder="+safeResponder+" doc="+ObjectUtil.toString(doc));
-			
-			var msg:MongoMsgKillCursors = new MongoMsgKillCursors(doc);
-			
-			// Write into socket
-			prepareMsgForSending(msg, safeResponder);
+			super.killCursors(doc, safeResponder);
+			log.info("EndOf killCursors");
 		}
 		
 		/**
@@ -541,9 +470,10 @@ package jmcnet.mongodb.driver
 		 * @param collectionName (String) : the name of the collection to create
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 */
-		public function createCollection(collectionName:String,  safeResponder:MongoResponder=null):void {
+		override public function createCollection(collectionName:String,  safeResponder:MongoResponder=null):void {
 			log.info("Calling createCollection collectionName="+collectionName+" safeResponder="+safeResponder);
-			runCommand(new MongoDocument("create",collectionName), safeResponder);
+			super.createCollection(collectionName, safeResponder);
+			log.info("EndOf createCollection");
 		}
 		
 		/**
@@ -551,10 +481,10 @@ package jmcnet.mongodb.driver
 		 * @param collectionName (String) : the name of the collection to drop
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 */
-		public function dropCollection(collectionName:String,  safeResponder:MongoResponder=null):void {
+		override public function dropCollection(collectionName:String,  safeResponder:MongoResponder=null):void {
 			log.info("Calling dropCollection collectionName="+collectionName+" safeResponder="+safeResponder);
-			
-			runCommand(new MongoDocument("drop",collectionName), safeResponder);
+			super.dropCollection(collectionName, safeResponder);
+			log.info("EndOf dropCollection");
 		}
 		
 		/**
@@ -562,9 +492,10 @@ package jmcnet.mongodb.driver
 		 * @param collectionName (String) : the name of the collection to rename
 		 * @param safeResponder (MongoResponder) : the callback called when getLastError is send and if safe mode is well valued (cf. safe mode). Default value is null,
 		 */
-		public function renameCollection(collectionName:String, newCollectionName:String, safeResponder:MongoResponder=null):void {
+		override public function renameCollection(collectionName:String, newCollectionName:String, safeResponder:MongoResponder=null):void {
 			log.info("Calling renameCollection collectionName="+collectionName+" newCollectionName="+newCollectionName+" safeResponder="+safeResponder);
-			runCommand(new MongoDocument("renameCollection",databaseName+"."+collectionName).addKeyValuePair("to",databaseName+"."+newCollectionName), safeResponder);
+			super.renameCollection(collectionName, newCollectionName, safeResponder);
+			log.info("EndOf renameCollection");
 		}
 		
 		/**
@@ -576,15 +507,10 @@ package jmcnet.mongodb.driver
 		 * @param limit (uint) : number of docs max to return. Usefull for pagination. Default is 0 (returns default documents number),
 		 * @param snapshot (Boolean) : if true makes a snapshot before counting.
 		 */
-		public function count(collectionName:String, query:MongoDocument=null, responder:MongoResponder=null, skip:uint=0, limit:uint=0, snapshot:Boolean=false):void {
+		override public function count(collectionName:String, query:MongoDocument=null, responder:MongoResponder=null, skip:uint=0, limit:uint=0, snapshot:Boolean=false):void {
 			log.info("Calling count collectionName="+collectionName+" responder="+responder+" skip="+skip+" limit="+limit+" snapshot="+snapshot);
-			var cmd:MongoDocument = new MongoDocument("count",collectionName);
-			if (query != null) cmd.addKeyValuePair("query", query);
-			if (skip != 0) cmd.addKeyValuePair("skip", skip);
-			if (limit != 0) cmd.addKeyValuePair("limit", limit);
-			if (snapshot != false) cmd.addKeyValuePair("snapshot", snapshot);
-			
-			runQueryCommand(cmd, responder, new CountResponseInterpreter());
+			super.count(collectionName, query, responder, skip, limit, snapshot);
+			log.info("EndOf count");
 		}
 		
 		/**
@@ -594,13 +520,10 @@ package jmcnet.mongodb.driver
 		 * @param query (MongoDocument) : the conditions document,
 		 * @param responder (MongoResponder) : the callback called when documents are ready to read. Default value is null,
 		 */
-		public function distinct(collectionName:String, key:String, query:MongoDocument=null, responder:MongoResponder=null):void {
+		override public function distinct(collectionName:String, key:String, query:MongoDocument=null, responder:MongoResponder=null):void {
 			log.info("Calling distinct collectionName="+collectionName+" key="+key+" responder="+responder);
-			var cmd:MongoDocument = new MongoDocument("distinct",collectionName);
-			if (key != null) cmd.addKeyValuePair("key", key);
-			if (query != null) cmd.addKeyValuePair("query", query);
-			
-			runQueryCommand(cmd, responder, new DistinctResponseInterpreter());
+			super.distinct(collectionName, key, query, responder);
+			log.info("EndOf distinct");
 		}
 		
 		/**
@@ -614,19 +537,10 @@ package jmcnet.mongodb.driver
 		 * @param cond (MongoDocument) : a document used to filter documents that will be grouped. Default value is null (all documents are considered),
 		 * @param finalize (JavaScriptCode) : a JS function used to finalize the result. JS signature must be "function(result):void". Default value is null (no finalization).
 		 */
-		public function group(collectionName:String, key:MongoDocument, reduce:JavaScriptCode, initial:MongoDocument, responder:MongoResponder=null, keyf:JavaScriptCode=null, cond:MongoDocument=null, finalize:JavaScriptCode=null):void {
+		override public function group(collectionName:String, key:MongoDocument, reduce:JavaScriptCode, initial:MongoDocument, responder:MongoResponder=null, keyf:JavaScriptCode=null, cond:MongoDocument=null, finalize:JavaScriptCode=null):void {
 			log.info("Calling group collectionName="+collectionName+" key="+key+" reduce="+reduce+" initial="+initial+" responder="+responder+" keyf="+keyf+" cond="+cond+" finalize="+finalize);
-			var grpCmd:MongoDocument= new MongoDocument();
-			if (collectionName != null) grpCmd.addKeyValuePair("ns", collectionName);
-			if (key != null) grpCmd.addKeyValuePair("key", key);
-			if (reduce != null) grpCmd.addKeyValuePair("$reduce", reduce);
-			if (initial != null) grpCmd.addKeyValuePair("initial", initial);
-			if (keyf != null) grpCmd.addKeyValuePair("$keyf", keyf);
-			if (cond != null) grpCmd.addKeyValuePair("cond", cond);
-			if (finalize != null) grpCmd.addKeyValuePair("finalize", finalize);
-			var cmd:MongoDocument = new MongoDocument("group", grpCmd); 
-			
-			runQueryCommand(cmd, responder, new GroupResponseInterpreter());
+			super.group(collectionName, key, reduce, initial, responder, keyf, cond, finalize);
+			log.info("EndOf group");
 		}
 		
 		/**
@@ -644,26 +558,13 @@ package jmcnet.mongodb.driver
 		 * @param jsMode (Boolean) : if true, all JS is executed in one JS instance. Default value is false,
 		 * @param verbose (Boolean) : if true output all 'print' JS command to the server logs. Default is false.
 		 */
-		public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, responder:MongoResponder=null,
+		override public function mapReduce(collectionName:String, map:JavaScriptCode, reduce:JavaScriptCode, out:MongoDocument, responder:MongoResponder=null,
 								  query:MongoDocument=null, sort:MongoDocument=null, limit:uint=0, finalize:JavaScriptCode=null,
 								  scope:MongoDocument=null, jsMode:Boolean=false, verbose:Boolean=false):void {
 			log.info("Calling mapReduce collectionName="+collectionName+" map="+map+" reduce="+reduce+" out="+out+" responder="+responder+
 				" query="+query+" sort="+sort+" limit="+limit+" finalize="+finalize+" scope="+scope+" jsMode="+jsMode+" verbose="+verbose);
-			var mapReduceCmd:MongoDocument= new MongoDocument();
-			if (collectionName != null) mapReduceCmd.addKeyValuePair("mapreduce", collectionName);
-			if (map != null) mapReduceCmd.addKeyValuePair("map", map);
-			if (reduce != null) mapReduceCmd.addKeyValuePair("reduce", reduce);
-			if (query != null) mapReduceCmd.addKeyValuePair("query", query);
-			if (sort != null) mapReduceCmd.addKeyValuePair("sort", sort);
-			if (limit != 0) mapReduceCmd.addKeyValuePair("limit", limit);
-			if (out != null) mapReduceCmd.addKeyValuePair("out", out);
-			if (finalize != null) mapReduceCmd.addKeyValuePair("finalize", finalize);
-			if (scope != null) mapReduceCmd.addKeyValuePair("scope", scope);
-			if (jsMode != false) mapReduceCmd.addKeyValuePair("jsMode", jsMode);
-			if (verbose != false) mapReduceCmd.addKeyValuePair("verbose", verbose);
-			// var cmd:MongoDocument = new MongoDocument("group", mapReduceCmd);
-			
-			runQueryCommand(mapReduceCmd, responder,  new MapReduceResponseInterpreter());
+			super.mapReduce(collectionName, map, reduce, out, responder, query, sort, limit, finalize, scope, jsMode, verbose);
+			log.info("EndOf mapReduce");
 		}
 		
 		/**
@@ -673,123 +574,20 @@ package jmcnet.mongodb.driver
 		 * @param callback (Function) : the callback called when documents are ready to read. Default value is null,
 		 * @see MongoAggregationPipeline
 		 */
-		public function aggregate(collectionName:String, pipeline:MongoAggregationPipeline, responder:MongoResponder=null):void {
+		override public function aggregate(collectionName:String, pipeline:MongoAggregationPipeline, responder:MongoResponder=null):void {
 			log.info("Calling aggregate collectionName="+collectionName+" pipeline="+pipeline+" responder="+responder);
-			if (pipeline == null) pipeline = new MongoAggregationPipeline();
-			var cmd:MongoDocument = new MongoDocument("aggregate", collectionName).addKeyValuePair("pipeline", pipeline.tabPipelineOperators);
-
-			runQueryCommand(cmd, responder, new AggregationResponseInterpreter());
-			log.info("EndIf aggregate");
+			super.aggregate(collectionName, pipeline, responder);
+			log.info("EndOf aggregate");
 		}
 
 		
 		/**
 		 * Called when a socket is available in the pool
 		 */
-		private function onFreeSocket(event:EventSocketPool):void {
+		override protected function onFreeSocket(event:EventSocketPool):void {
 			log.debug("Calling onFreeSocket : A free socket is available in the pool");
-			// get the first awaiting message
-			var msg:Object = _awaitingMessages.pop();
-			
-			// if awaiting list is not empty, pop and send message
-			if (msg == null) {
-				log.debug("No awaiting messages");
-				return ;
-			}
-			
-			// gets a socket
-			var socket:TimedSocket = null;
-			try {
-				socket = getConnectedSocket();
-			} catch (e:ExceptionJMCNetMongoDB) {
-				log.warn("There was waiting message that cannot be send exception="+e.message+" msg="+ObjectUtil.toString(msg));
-			}
-			
-			// if no more socket -> repush the message
-			if (socket == null) {
-				log.warn("There is no more socket in onFreeSocket... Curious or see preceeding error.");
-				_awaitingMessages.push(msg);
-				return ;
-			}
-			
-			// sending
-			sendMessageToSocket(msg as MongoMsgAbstract, socket);
-			log.debug("EndOf onFreeSocket : the socket #"+socket.id+" has been used for pulling a waiting message.");
-		}
-		
-		private function sendMessageToSocket(msg:MongoMsgAbstract, socket:TimedSocket):void {
-			// send the message by writing BSON into socket
-			var bson:ByteArray = msg.toBSON();
-			log.evt("Calling sendMessageToSocket socket #"+socket.id+" msg='"+msg.toString()+"'");
-			if (logBSON) log.debug("sendMessageToSocket sending msg : "+HelperByteArray.byteArrayToString(bson));
-			
-			
-			if (!msg.needResponse) {
-				log.debug("Write message in socket #"+socket.id);
-				socket.writeBytes(bson);
-				socket.flush();
-				
-				log.debug("There no answer to wait for. Check if safe mode.");
-				// There is no DB answer
-				// safeMode ?
-				checkSafeModeAndReleaseSocket(msg.responder, socket);
-			}
-			else {
-				// lookup the answer
-				log.debug("There will be an answer to wait for, so prepare the reader. socket #"+socket.id);
-				if (msg.responder == null) msg.responder = new MongoResponder(onResponseQueryReady);
-				new MongoResponseReader(socket, msg.responder, _pool);
-				log.debug("Write message in socket #"+socket.id);
-				socket.writeBytes(bson);
-				socket.flush();
-			}
-		}
-		
-		private function getConnectedSocket():TimedSocket {
-			if (!isConnecte()) {
-				log.warn("Not connected to MongoDB");
-				throw new ExceptionJMCNetMongoDB("Not connected to MongoDB");
-			}
-			var socket:TimedSocket = _pool.getFreeSocket();
-			// When there is no more free socket, just wait...
-			
-			return socket;
-		}
-		
-		private function checkSafeModeAndReleaseSocket(responder:MongoResponder, socket:TimedSocket):void {
-			log.debug("Calling checkSafeMode responder="+responder+" socket #"+socket.id);
-			if (_w > 0) {
-				// Safe mode
-				log.debug("We are in safe Mode");
-				var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(_lastErrorDoc), null, 0, -1);
-				msg.responder = responder == null ? new MongoResponder(onResponseLastError):responder;
-				msg.responder.responseInterpreter = new GetLastErrorResponseInterpreter();
-				sendMessageToSocket(msg, socket);
-				log.debug("Waiting for getLastError (safeMode) answer");
-			}
-			else {
-				log.debug("We are not in safe Mode -> release the socket");
-				_pool.releaseSocket(socket);
-			}
-		}
-		
-		private function prepareMsgForSending(msg:MongoMsgAbstract, responder:MongoResponder):void {
-			log.debug("Calling prepareMsgForSending");
-			
-			msg.responder = responder;
-			var socket:TimedSocket=getConnectedSocket();
-			
-			if (socket != null) {
-				log.debug("There is an available socket -> sends directly in socket #"+socket.id);
-				// Write into socket
-				sendMessageToSocket(msg, socket);
-			}
-			else {
-				log.info("There is no more available socket. We have to wait ...");
-				_awaitingMessages.push(msg);
-			}
-			
-			log.debug("End of prepareMsgForSending awaitingMessages.length="+_awaitingMessages.length);
+			super.onFreeSocket(event);
+			log.debug("EndOf onFreeSocket");
 		}
 		
 		override public function toString():String {
@@ -811,5 +609,17 @@ package jmcnet.mongodb.driver
 		 * @return uint
 		 */
 		public static function set maxDBRefDepth(maxDBRefDepth:uint):void { JMCNetMongoDBDriver._maxDBRefDepth = maxDBRefDepth; }
+
+		public function get lastErrorDoc():MongoDocument
+		{
+			return _lastErrorDoc;
+		}
+
+		public function get pool():SocketPoolAuthenticated
+		{
+			return _pool;
+		}
+
+
 	}
 }

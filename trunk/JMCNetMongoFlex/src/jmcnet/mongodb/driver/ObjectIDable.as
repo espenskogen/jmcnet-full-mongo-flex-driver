@@ -1,5 +1,6 @@
 package jmcnet.mongodb.driver
 {
+	import flash.errors.IllegalOperationError;
 	import flash.utils.getQualifiedClassName;
 	
 	import jmcnet.mongodb.documents.ObjectID;
@@ -13,7 +14,7 @@ package jmcnet.mongodb.driver
 		
 		public function ObjectIDable(_id:ObjectID=null) {
 			if ( getQualifiedClassName(super) == "ObjectIDable" )
-				throw new UninitializedError("The class ObjectIDable is abstract and cannot be instanciated.");
+				throw new IllegalOperationError("The class ObjectIDable is abstract and cannot be instanciated.");
 			this._id = _id;
 		}
 	}

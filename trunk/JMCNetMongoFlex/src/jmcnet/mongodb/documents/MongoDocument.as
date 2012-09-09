@@ -424,6 +424,39 @@ package jmcnet.mongodb.documents
 		public static function push(value:Object):MongoDocument { return new MongoDocument().push(value); }
 		
 		/**
+		 * Returns a $set command for update which set a key/value in an existing document.
+		 */
+		public function set(key:String, value:Object):MongoDocument { return addKeyValuePair("$set", MongoDocument.addKeyValuePair(key, value)); }
+		public static function set(key:String, value:Object):MongoDocument { return new MongoDocument().set(key, value); }
+		
+		/**
+		 * Returns a $unset command for update which unset a key in an existing document.
+		 */
+		public function unset(key:String):MongoDocument { return addKeyValuePair("$unset", MongoDocument.addKeyValuePair(key, 1)); }
+		public static function unset(key:String):MongoDocument { return new MongoDocument().unset(key); }
+		
+		/**
+		 * Returns a $inc command for update which increment the value of an attribute by increment value.
+		 */
+		public function inc(key:String, increment:int):MongoDocument { return addKeyValuePair("$inc", MongoDocument.addKeyValuePair(key, increment)); }
+		public static function inc(key:String, increment:int):MongoDocument { return new MongoDocument().inc(key, increment); }
+		
+		/**
+		 * Returns a $push command for update which push a key/value in an array of an existing document.
+		 */
+		public function pushForUpdate(key:String, value:Object):MongoDocument { return addKeyValuePair("$push", MongoDocument.addKeyValuePair(key, value)); }
+		public static function pushForUpdate(key:String, value:Object):MongoDocument { return new MongoDocument().pushForUpdate(key, value); }
+		
+		/**
+		 * Returns a $pushAll command for update which push all key/value of an array in an array attribute of an existing document.
+		 */
+		public function pushAll(key:String, ... docs:Array):MongoDocument { return addKeyValuePair("$pushAll", MongoDocument.addKeyValuePair(key, docs)); }
+		public static function pushAll(key:String, ... docs:Array):MongoDocument { return new MongoDocument().addKeyValuePair("$pushAll", MongoDocument.addKeyValuePair(key, docs)); }
+		
+		// TODO adds following operators
+		// $addToSet, $each, $pop, $pull, $pullAll, $rename, $bit
+		
+		/**
 		 * Returns a DBRef document. A DBRef can link a document from one collection to another document in another collection.
 		 * @see http://www.mongodb.org/display/DOCS/Updating+Data+in+Mongo for more informations
 		 */
