@@ -90,8 +90,13 @@ package jmcnet.libcommun.flexunit
 			if (collectionToClean != null) {
 				// clean up -> delete object
 				log.info("Cleaning the test collection : "+collectionToClean);
+				Async.handleEvent(this, driver, JMCNetMongoDBDriver.EVT_RUN_COMMAND, onDropOK, 5000, null, onTimeoutConnexion);
 				driver.dropCollection(collectionToClean);
 			}
+		}
+		
+		public function onDropOK(event:Event, ... args):void {
+			log.info("Drop command succeed. Normal tests can begin.");
 		}
 		
 		public function onTimeoutConnexion(event:Event, ... args):void {

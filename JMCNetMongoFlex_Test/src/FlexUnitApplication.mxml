@@ -7,17 +7,15 @@
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:flexui="flexunit.flexui.*"
 			   minWidth="955" minHeight="600" creationComplete="onCreationComplete()">
+	
 	<fx:Script>
 		<![CDATA[
-			import junit.MongoDBRefTest;
-			
 			public function currentRunTestSuite():Array
 			{
 				var testsToRun:Array = new Array();
-				testsToRun.push(junit.MongoDBRefTest);
+				testsToRun.push(AllTests);
 				return testsToRun;
 			}
-			
 			
 			private function onCreationComplete():void
 			{
@@ -26,6 +24,7 @@
 			
 		]]>
 	</fx:Script>
+	
 	<fx:Declarations>
 		<!-- Placer ici les éléments non visuels (services et objets de valeur, par exemple). -->
 	</fx:Declarations>
