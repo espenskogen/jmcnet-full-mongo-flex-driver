@@ -16,7 +16,7 @@ In all drivers commands taking a !MongoResponder in parameter, the responder is 
 
 == Callbacks rules ==
 When using a responder, you must provide a normal result callback, but error callback and the token are facultatives.
-If error callback is not provided, the normal callback is called in case of error. You can test if the command was OK using the _isOk_ attribute of the _MongoDocumentResponse_ object.  
+If error callback is not provided, the normal callback is called in case of error. You can test if the command was OK using the _isOk_ attribute of the _!MongoDocumentResponse_ object.  
 
 Normal and error callbacks must have this signature :
 {{{
@@ -63,6 +63,25 @@ public function onInsertResponse(response:MongoDocumentResponse, token:*):void {
 	}
 }
 }}}
+
+== Responder and safeMode ==
+Callbakcs handling and safeMode combination can be tricky.
+With MongoDB some commands always have an answer, and some don't have any answer by default. The driver permits you to automatically send the _!GetLastError_ command when a command has no answer.
+This is done by setting the safeMode to one of this value : SAFE_MODE_SAFE, SAFE_MODE_REPLICAS_SAFE, SAFE_MODE_MAJORITY.
+When you set the safeMode in one of those value, all commands have an answer, and thus, if you pass a Responder, it will be called.
+
+If safeMode is SAFE_MODE_NONE or SAFE_MODE_NORMAL, some commands will never have an answer and thus Responder's callback will never be called.
+
+This table synthetize the command's and type of returns depending on safeMode :
+||*Command*||*Type of returns in non safe mode* (SAFE_MODE_NONE, SAFE_MODE_NORMAL)||*Type of returns in safe mode* (SAFE_MODE_SAFE, SAFE_MODE_REPLICAS_SAFE, SAFE_MODE_MAJORITY)||
+||insertDoc, updateDoc, deleteDoc || none || getLastError returns ||
+|| queryDoc, getMoreDoc, runQueryCommand || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| runCommand || none || getLastError returns ||
+|| getLastError || getLastError returns || idem ||
+|| killCursor || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| createCollection, dropCollection, renameCollection || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+|| count, distinct, group, mapReduce, aggregate  || MongoDocument in response.documents and Array of Object in response.interpretedResponse || idem ||
+
  
 
 = Quick index =
