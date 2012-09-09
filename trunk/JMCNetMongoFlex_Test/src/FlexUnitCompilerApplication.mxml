@@ -11,6 +11,8 @@ Cliquez sur l'icône d'actualisation dans la vue "Résultat des tests unitaires 
 			import junit.MongoAggregationTest;
 			
 			private var junit_MongoAggregationTest_obj:junit.MongoAggregationTest;
+			
+			private var flexUnitTests_AllTests_obj:AllTests;
 		]]>
 	</fx:Script>
 	<fx:Declarations>
