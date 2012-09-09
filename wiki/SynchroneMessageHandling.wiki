@@ -25,7 +25,8 @@ More than this, when runner complete, you get an array of all the MongoDocumentR
 Examples :
 Instanciating a MongoSyncRunner :
 {{{
-// Give the driver in parameter and a boolean named continueOnError which is true if the runner continue running in case of an error
+// Give the driver in parameter and a boolean named continueOnError which is true if the runner
+// continue running in case of an error
 var syncRunner:MongoSyncRunner = new MongoSyncRunner(driver, false);
 }}}
 
@@ -33,12 +34,12 @@ Adding commands in the runner that will be executed synchronously :
 {{{
 syncRunner.createCollection("testu");
 syncRunner.insertDoc("testu", [doc1], new MongoResponder(onInsertCallback, null, myToken)); // will be send after createCollection
-syncRunner.updateDoc("testu",                                                // will be send after insertDoc
+syncRunner.updateDoc("testu",                                                               // will be send after insertDoc
 	new MongoDocumentUpdate(
 		MongoDocument.addKeyValuePair("author","bob"),
 		MongoDocument.set("title","The new title")),
 	null, false, false);
-syncRunner.queryDoc(                                                         // will be send after updateDoc
+syncRunner.queryDoc(                                                                        // will be send after updateDoc
 	"testu",
 	new MongoDocumentQuery(MongoDocument.addKeyValuePair("_id", doc1._id)),
 	new MongoResponder(onQueryCallback));
@@ -102,7 +103,7 @@ For more information about Responder callback and interaction with safeMode, see
   * [Home],
   * [Responder Using responder],
   * [DriverInitialization Driver's initialisation and safeMode],
-  * [Query] (Find, FindOne, getMore, killCursor),
+  * [Query] (Find, getMore, killCursor),
   * [Count],
   * [Distinct],
   * [Group],
