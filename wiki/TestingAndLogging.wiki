@@ -1,4 +1,4 @@
-#summary How to use the new (2.2) aggregation framework
+#summary How to debug and test using the JMCNetMongoDBDriver
 #labels Phase-Implementation,Featured
 
 <wiki:toc max_depth="3" />
