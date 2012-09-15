@@ -84,7 +84,7 @@ The driver can be configured to use safe mode (cf. mongoDB documentation for mor
 There is 5 safe mode you can use (from less to more secure) :
   # SAFE_MODE_NONE : writes returns immediately without any check. Don't even check for network error,
   # SAFE_MODE_NORMAL :  don't call _getLastError_ by default but check for network error. This is default value,
-  # SAFE_MODE_SAFE : call _getLastErro_r after update, insert or delete, but don't wait for slave. This call is done in the same socket,
+  # SAFE_MODE_SAFE : call _getLastError_ after update, insert or delete, but don't wait for slave. This call is done in the same socket,
   # SAFE_MODE_MAJORITY : writes returns when the data are replicated on a majority of servers,
   # SAFE_MODE_REPLICAS_SAFE : call _getLastError_ and wait for slaves to complete operation
 
