@@ -1,6 +1,7 @@
 package
 {
 	import junit.MongoAggregationTest;
+	import junit.MongoCommandsTest;
 	import junit.MongoDBRefTest;
 	import junit.MongoDriverTest;
 	import junit.MongoSyncRunnerSafeModeTest;
@@ -15,6 +16,6 @@ package
 		public var test3:junit.MongoDriverTest;
 		public var test4:junit.MongoSyncRunnerTest;
 		public var test5:junit.MongoSyncRunnerSafeModeTest;
-		
+		public var test6:junit.MongoCommandsTest;
 	}
 }
