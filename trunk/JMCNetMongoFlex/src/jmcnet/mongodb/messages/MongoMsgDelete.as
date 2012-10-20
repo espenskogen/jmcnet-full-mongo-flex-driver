@@ -61,7 +61,7 @@ package jmcnet.mongodb.messages
 		}
 		
 		override public function toString():String {
-			return "[MongoMsgDelete : doc="+(_deleteDoc != null ? _deleteDoc.toString():"null")+" header=["+(header != null ? header.toString():"null")+"]]";
+			return "[MongoMsgDelete : doc="+_deleteDoc+" header=["+header+"]]";
 		}
 	}
 }

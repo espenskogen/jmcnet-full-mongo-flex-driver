@@ -86,7 +86,7 @@ package jmcnet.mongodb.messages
 			log.evt("Received complete response on socket #"+_socket.id);
 			if (_responder != null) {
 				_reponse = _responder.responseInterpreter.decodeDriverReturn(_responseLength, _response, _socket);
-				log.evt("There is a responder : complete response on socket #"+_socket.id+" is response='"+_reponse.toString()+"'");
+				log.evt("There is a responder : complete response on socket #"+_socket.id+" is response='"+_reponse+"'");
 				// If there is no error callback but there is a normal callback, call the normal callback
 				if (_reponse.isOk) {
 					if (MongoDocument.logDocument) log.debug("responder.fetchDbRef="+_responder.fetchDBRef+" maxDBRefDepth="+JMCNetMongoDBDriver.maxDBRefDepth);
@@ -116,7 +116,7 @@ package jmcnet.mongodb.messages
 			}
 			else {
 				_reponse = new BasicResponseInterpreter().decodeDriverReturn(_responseLength, _response, _socket);
-				log.evt("There is no responder : Received complete response : "+_reponse.toString()+" on socket #"+_socket.id);
+				log.evt("There is no responder : Received complete response : "+_reponse+" on socket #"+_socket.id);
 			}
 		}
 		
@@ -126,7 +126,7 @@ package jmcnet.mongodb.messages
 			if (_nbFetchToReceive <= 0) {
 				if (_fetchError) {
 					var msg:String="DBRef Fetching error : almost one of the DBRef could not be deferenced.";
-					if (_dbRefInError != null) msg += " Last DBRef in error : "+_dbRefInError.toString();
+					if (_dbRefInError != null) msg += " Last DBRef in error : "+_dbRefInError;
 					if (MongoDocument.logDocument) log.debug("Calling callback error method of responder");
 					_responder.fault(MongoDocumentResponse.createErrorResponse(msg, _socket));
 				}
@@ -149,7 +149,7 @@ package jmcnet.mongodb.messages
 		}
 		
 		private function onError(event:Event):void {
-			log.error("onError Receiving database answer socket #"+_socket.id+" event="+event.toString());
+			log.error("onError Receiving database answer socket #"+_socket.id+" event="+event);
 			removeListener();
 			if (MongoDocument.logDocument) log.debug("Calling callback error method of responder (if there is one)");
 			if (_responder != null) _responder.fault(MongoDocumentResponse.createErrorResponse(event.toString(), _socket));

@@ -43,7 +43,7 @@ package jmcnet.mongodb.documents
 		}
 		
 		/**
-		 * Add a key value pair to the MongoDocument object.
+		 * Add a key value pair to the MongoDocument object. If the key already exists and value is a MongoDocument, both document are merged
 		 * @param key String The key used to name the value
 		 * @param value Object The object to store in the MongoDocument. Any type is possible for value.
 		 * @return this
@@ -51,13 +51,30 @@ package jmcnet.mongodb.documents
 		public function addKeyValuePair(key:String, value:Object):MongoDocument {
 			if (logDocument) log.debug("addKeyValuePair key="+key+" value="+value);
 
+			var oldValue:Object = _table.getItem(key);
 			if (value != null && value is ArrayCollection) {
 				if (logDocument) log.debug("value is ArrayCollection");
-				_table.addItem(key, (value as ArrayCollection).toArray());
+				if (oldValue == null || !(oldValue is Array)) {
+					_table.addItem(key, (value as ArrayCollection).toArray());
+				}
+				else {
+					if (logDocument) log.debug("value is ArrayCollection. There was a preceeding Array value for this key -> merge the both Array");
+					_table.addItem(key, (oldValue as Array).push((value as ArrayCollection).toArray()));
+				}
 			}
 			else {
 				if (logDocument) log.debug("value is not an ArrayCollection");
-				_table.addItem(key, value);
+				if (oldValue == null || !(oldValue is MongoDocument)) {
+					_table.addItem(key, value);
+				}
+				else {
+					if (logDocument) log.debug("value is not an ArrayCollection. There was a preceeding MongoDocument value for this key -> merge the both MongoDocument");
+					var mDoc:MongoDocument = value as MongoDocument;
+					var oldValueDoc:MongoDocument = oldValue as MongoDocument;
+					for each (var mKey:String in mDoc.getKeys()) {
+						oldValueDoc.addKeyValuePair(mKey, mDoc.getValue(mKey));
+					}
+				}
 			}
 			
 			return this;
@@ -100,10 +117,10 @@ package jmcnet.mongodb.documents
 				value = _table.getItem(key);
 				if (i != 0) result += ", ";
 				if ( value is Array) {
-					result += key+": [ "+ (value != null ? value.toString():"null")+" ] ";
+					result += key+": [ "+ value +" ] ";
 				}
 				else  {
-					result += key+":"+ (value != null ? value.toString():"null");
+					result += key+":"+ value;
 				}
 			}
 			result += "}";
@@ -523,7 +540,7 @@ package jmcnet.mongodb.documents
 		}
 		
 		private function internalFetch(doc:MongoDocument, depth:uint):void {
-			if (logDocument) log.debug("Calling internalFetch document="+doc.toString()+" depth="+depth);
+			if (logDocument) log.debug("Calling internalFetch document="+doc+" depth="+depth);
 			for each (var obj:Object in doc.table.getAllItems()) {
 				internalFetchObject(obj, depth);
 			}
@@ -532,7 +549,7 @@ package jmcnet.mongodb.documents
 		}
 		
 		private function internalFetchObject(obj:Object, depth:uint):void {
-			if (logDocument) log.debug("Calling internalFetchObject obj="+obj.toString()+" depth="+depth);
+			if (logDocument) log.debug("Calling internalFetchObject obj="+obj+" depth="+depth);
 			if (obj is MongoDocument) {
 				if (logDocument) log.debug("is document");
 				internalFetch(obj as MongoDocument, depth);
@@ -548,7 +565,7 @@ package jmcnet.mongodb.documents
 				dbref.addEventListener(DBRef.EVENT_DBREF_FETCH_COMPLETE, onFetchComplete);
 				dbref.addEventListener(DBRef.EVENT_DBREF_FETCH_ERROR, onFetchError);
 				_nbDbRef++;
-				if (logDocument) log.debug("is dbref -> fetching dbref="+dbref.toString()+" nbDbRef="+_nbDbRef);
+				if (logDocument) log.debug("is dbref -> fetching dbref="+dbref+" nbDbRef="+_nbDbRef);
 				dbref.depth = depth;
 				dbref.fetch();
 				// fecthing the value if depth < maxDBRefDepth
@@ -557,28 +574,28 @@ package jmcnet.mongodb.documents
 					internalFetchObject(dbref.documentValue, depth+1);
 				}
 			}
-			if (logDocument) log.debug("EndOf internalFetchObject obj="+obj.toString()+" depth="+depth+" nbDbRef="+_nbDbRef);
+			if (logDocument) log.debug("EndOf internalFetchObject obj="+obj+" depth="+depth+" nbDbRef="+_nbDbRef);
 		}
 		
 		private function onFetchComplete(event:EventMongoDB):void {
 			var dbref:DBRef = event.target as DBRef;
-			if (logDocument) log.evt("Calling onFetchComplete dbRef="+dbref.toString()+" depth="+dbref.depth);
+			if (logDocument) log.evt("Calling onFetchComplete dbRef="+dbref+" depth="+dbref.depth);
 			
 			// fecthing the value if depth < maxDBRefDepth
 			if (dbref.documentValue != null && dbref.depth+1 < _maxDBRefDepth) {
-				if (logDocument) log.debug("Fetching dbref.value dbref.document="+dbref.documentValue.toString()+" newDepth="+(dbref.depth+1)+" nbDbRef="+_nbDbRef);
+				if (logDocument) log.debug("Fetching dbref.value dbref.document="+dbref.documentValue+" newDepth="+(dbref.depth+1)+" nbDbRef="+_nbDbRef);
 				internalFetchObject(dbref.documentValue, dbref.depth+1);
 			}
 			
 			_nbDbRef--;
 			verifyNbDBRefAndDispatchEvent(dbref.depth);
 			
-			if (logDocument) log.info("EndOf onFetchComplete dbref="+dbref.toString()+" docToFetch="+toString());
+			if (logDocument) log.info("EndOf onFetchComplete dbref="+dbref+" docToFetch="+toString());
 		}
 		
 		private function onFetchError(event:EventMongoDB):void {
 			var dbref:DBRef = event.target as DBRef;
-			log.evt("Calling onFetchError dbref="+dbref.toString());
+			log.evt("Calling onFetchError dbref="+dbref);
 			
 			_nbDbRef--;
 			_success = false;

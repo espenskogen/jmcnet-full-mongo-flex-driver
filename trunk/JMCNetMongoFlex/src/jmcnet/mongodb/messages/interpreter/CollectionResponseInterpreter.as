@@ -8,7 +8,7 @@ package jmcnet.mongodb.messages.interpreter
 	
 	
 	/**
-	 * This BasicResponseInterpreter is the default one. It does only transform the raw response into a simple MongoDocumentResponse
+	 * This CollectionResponseInterpreter deals with command about collections like deleteCollection, renameCollection, ...
 	 */
 	public class CollectionResponseInterpreter extends BasicResponseInterpreter
 	{
