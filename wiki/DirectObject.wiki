@@ -398,6 +398,24 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
+== Turns off DirectObject feature (mainly for performance reason) ==
+{{{
+// Ask for all object in collections but don't interprete them
+			var nullResponder:MongoResponder = new MongoResponder(onResponseReceivedTestNullResponseInterpreter);
+			nullResponder.responseInterpreter = new NullResponseInterpreter();
+			driver.queryDoc("testu", null, nullResponder);
+...
+
+public function onResponseReceivedTestNullResponseInterpreter(rep:MongoDocumentResponse, token:*):void {
+			log.debug("Calling onResponseReceivedTestNullResponseInterpreter responseDoc="+rep+" token="+token);
+			
+			assertEquals(3, rep.documents.length);
+			assertNull(rep.interpretedResponse);
+			log.debug("EndOf onResponseReceivedTestNullResponseInterpreter");
+		}
+
+}}}
+
 = See also =
   * [Home],
   * [Responder Using responder],
