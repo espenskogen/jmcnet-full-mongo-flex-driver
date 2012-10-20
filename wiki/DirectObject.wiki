@@ -398,7 +398,8 @@ public function onResponseReceivedArrayCollection(rep:MongoDocumentResponse):voi
 So, the structure returned is :
 Array of 1 !MongoDocument containing an Array named "arrayCollectionName" containing 2 !MongoDocument each with attrx attributes.
 
-== Turns off DirectObject feature (mainly for performance reason) ==
+= Turns off DirectObject feature (mainly for performance reason) =
+To turn off this feature you need to use a NullResponseInterpreter which does not try to interprete the response. You use it like this :
 {{{
 // Ask for all object in collections but don't interprete them
 			var nullResponder:MongoResponder = new MongoResponder(onResponseReceivedTestNullResponseInterpreter);
