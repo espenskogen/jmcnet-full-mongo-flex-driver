@@ -220,10 +220,10 @@ package jmcnet.mongodb.driver
 		 * We receive the nonce, let's do authentication
 		 */
 		private function onGetNonce(response:MongoDocumentResponse, token:*):void {
-			log.evt("Calling onGetNonce response="+response.toString()+" socket #"+response.socket.id);
+			log.evt("Calling onGetNonce response="+response+" socket #"+response.socket.id);
 			
 			if (response.documents.length < 1 || response.documents[0].getValue("nonce") == null) {
-				var errmsg:String="Error while authenticating. Nonce value not received. Check MongoDB logs. Response is : '"+response.toString()+"'";
+				var errmsg:String="Error while authenticating. Nonce value not received. Check MongoDB logs. Response is : '"+response+"'";
 				log.warn(errmsg);
 				if (_firstAuthenticationError) {
 					_firstAuthenticationError = false;
@@ -256,9 +256,9 @@ package jmcnet.mongodb.driver
 		 * We receive the authent response
 		 */
 		private function onGetAuthentResponse(response:MongoDocumentResponse, token:*):void {
-			log.evt("Calling onGetAuthentResponse response="+response.toString()+" socket #"+response.socket.id);
+			log.evt("Calling onGetAuthentResponse response="+response+" socket #"+response.socket.id);
 			if (response.documents.length < 1 || response.documents[0].getValue("ok") == null) {
-				var errmsg:String="Error while authenticating. Authentication response not received. Check MongoDB logs. Response is : '"+response.toString()+"'";
+				var errmsg:String="Error while authenticating. Authentication response not received. Check MongoDB logs. Response is : '"+response+"'";
 				log.warn(errmsg);
 				throw new ExceptionJMCNetMongoDB(errmsg);
 			}
@@ -375,7 +375,7 @@ package jmcnet.mongodb.driver
 		override public function queryDoc(collectionName:String, query:MongoDocumentQuery, responder:MongoResponder=null, returnFields:MongoDocument=null,
 								 numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false,
 								 awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
-			log.info("Calling queryDoc collectionName="+collectionName+" query="+query.toString()+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			log.info("Calling queryDoc collectionName="+collectionName+" query="+query+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 			super.queryDoc(collectionName,query,responder,returnFields, numberToSkip, numberToReturn, tailableCursor, slaveOk, noCursorTimeout, awaitData, exhaust, partial);
 			log.info("EndOf queryDoc");
 			
@@ -401,7 +401,7 @@ package jmcnet.mongodb.driver
 		 * @param interpreter (MongoResponseInterpreter) : a interpretor class which exploit the result a transform this in MongoDocumentResponse.interpretedResponse object.
 		 */
 		override public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
-			log.info("Calling runCommand command="+command.toString()+" responder="+responder);
+			log.info("Calling runCommand command="+command+" responder="+responder);
 			super.runCommand(command, responder, interpreter);
 			log.info("EndOf runCommand");
 		}
@@ -412,7 +412,7 @@ package jmcnet.mongodb.driver
 		 * @param responder (Responder) : the responder called with command's results.
 		 */
 		override public function runQueryCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
-			log.info("Calling runQueryCommand command="+command.toString()+" responder="+responder);
+			log.info("Calling runQueryCommand command="+command+" responder="+responder);
 			super.runQueryCommand(command, responder, interpreter);
 			log.info("EndOf runQueryCommand");
 		}
@@ -578,6 +578,15 @@ package jmcnet.mongodb.driver
 			log.info("Calling aggregate collectionName="+collectionName+" pipeline="+pipeline+" responder="+responder);
 			super.aggregate(collectionName, pipeline, responder);
 			log.info("EndOf aggregate");
+		}
+		
+		/**
+		 * Search for all collectionName of a database. The result is an ArrayCollection of collectionName (without databasename).
+		 */
+		override public function listCollections(responder:MongoResponder=null):void {
+			log.info("Calling listCollections responder="+responder);
+			super.listCollections(responder);
+			log.info("EndIf listCollections");
 		}
 
 		

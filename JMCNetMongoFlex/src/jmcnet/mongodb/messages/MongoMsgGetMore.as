@@ -26,7 +26,7 @@ package jmcnet.mongodb.messages
 		}
 		
 		override public function toBSON():ByteArray {
-			if (BSONEncoder.logBSON) log.debug("Calling MongoMsgGetMore::toBSON cursorID="+_cursorID.toString()+" numberToRetun="+_numberToReturn);
+			if (BSONEncoder.logBSON) log.debug("Calling MongoMsgGetMore::toBSON cursorID="+_cursorID+" numberToRetun="+_numberToReturn);
 			
 			// There must one or mode documents to insert
 			var msg:ByteArray = new ByteArray();
@@ -57,7 +57,7 @@ package jmcnet.mongodb.messages
 		override public function get needResponse():Boolean { return true;}
 		
 		override public function toString():String {
-			return "[MongoMsgGetMore : cursorID="+(_cursorID.toString())+" header=["+(header != null ? header.toString():"null")+"]]";
+			return "[MongoMsgGetMore : cursorID="+_cursorID+" header=["+header+"]]";
 		}
 	}
 	

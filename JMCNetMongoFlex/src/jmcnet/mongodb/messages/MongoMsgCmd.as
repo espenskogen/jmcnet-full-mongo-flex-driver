@@ -69,7 +69,7 @@ package jmcnet.mongodb.messages
 		override public function get needResponse():Boolean { return true;}
 		
 		override public function toString():String {
-			return "[MongoMsgCmd : cmd="+(cmd != null ? cmd.toString():"null")+" header=["+(header != null ? header.toString():"null")+"]]";
+			return "[MongoMsgCmd : cmd="+cmd+" header=["+header+"]]";
 		}
 	}
 }

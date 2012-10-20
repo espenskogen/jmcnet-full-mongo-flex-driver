@@ -80,7 +80,7 @@ package jmcnet.mongodb.bson
 								var dbref:DBRef = retDoc.toDBRef();
 								if (isArray) result.push(dbref);
 								else result.addKeyValuePair(attrName, dbref);
-								if (logBSON) log.debug("bsonReadElements we have found a DBRef document :"+dbref.toString());			
+								if (logBSON) log.debug("bsonReadElements we have found a DBRef document :"+dbref);			
 							}
 							else if (isArray) result.push(retDoc);
 							else result.addKeyValuePair(attrName, retDoc);
@@ -129,7 +129,7 @@ package jmcnet.mongodb.bson
 				throw new ExceptionJMCNetMongoDB(errMsg);
 			}
 			
-			if (logBSON) log.debug("BSONDecoder::bsonReadElements result="+result.toString());
+			if (logBSON) log.debug("BSONDecoder::bsonReadElements result="+result);
 			return result;
 		}
 		

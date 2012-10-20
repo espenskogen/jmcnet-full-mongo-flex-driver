@@ -68,7 +68,7 @@ package jmcnet.mongodb.messages
 		public function set responder(value:MongoResponder):void { _responder = value; }
 		
 		public function toString():String {
-			return "[MongoMsgAbstract : dbName="+dbName+" collectionName="+collectionName+" header=["+(_header != null ? _header.toString():"null")+"]]";
+			return "[MongoMsgAbstract : dbName="+dbName+" collectionName="+collectionName+" header=["+_header+"]]";
 		}
 
 		protected function get header():MongoMsgHeader { return _header; }

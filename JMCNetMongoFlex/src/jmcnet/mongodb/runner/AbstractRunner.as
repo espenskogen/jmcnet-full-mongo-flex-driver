@@ -41,6 +41,7 @@ package jmcnet.mongodb.runner
 	import jmcnet.mongodb.messages.interpreter.DistinctResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.GetLastErrorResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.GroupResponseInterpreter;
+	import jmcnet.mongodb.messages.interpreter.ListCollectionsResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.MapReduceResponseInterpreter;
 	import jmcnet.mongodb.messages.interpreter.MongoResponseInterpreterInterface;
 	
@@ -141,7 +142,7 @@ package jmcnet.mongodb.runner
 		public function queryDoc(collectionName:String, query:MongoDocumentQuery, responder:MongoResponder=null, returnFields:MongoDocument=null,
 								 numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false,
 								 awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):void {
-			log.info("Calling query collectionName="+collectionName+" query="+query.toString()+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			log.info("Calling query collectionName="+collectionName+" query="+query+" responder="+responder+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 			
 			var msg:MongoMsgQuery = prepareQuery(collectionName, query, returnFields, numberToSkip, numberToReturn, tailableCursor, awaitData, exhaust, partial);
 			
@@ -169,7 +170,7 @@ package jmcnet.mongodb.runner
 		 * Default callback when not specified by user
 		 */
 		private function onResponseQueryReady (response:MongoDocumentResponse,token:*):void {
-			log.debug("Calling onResponseReady response="+response.toString()+" token="+token);
+			log.debug("Calling onResponseReady response="+response+" token="+token);
 			// Dispatch the answer
 			this.dispatchEvent(new EventMongoDB(EVT_RESPONSE_RECEIVED, response));
 		}
@@ -181,7 +182,7 @@ package jmcnet.mongodb.runner
 		 * @param interpreter (MongoResponseInterpreter) : a interpretor class which exploit the result a transform this in MongoDocumentResponse.interpretedResponse object.
 		 */
 		public function runCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
-			log.info("Calling runCommand command="+command.toString()+" responder="+responder);
+			log.info("Calling runCommand command="+command+" responder="+responder);
 			var msg:MongoMsgCmd = new MongoMsgCmd(_driver.databaseName);
 			msg.cmd = command;
 			
@@ -200,7 +201,7 @@ package jmcnet.mongodb.runner
 		 * @param responder (Responder) : the responder called with command's results.
 		 */
 		public function runQueryCommand(command:MongoDocument, responder:MongoResponder=null, interpreter:MongoResponseInterpreterInterface=null ):void {
-			log.info("Calling runQueryCommand command="+command.toString()+" responder="+responder);
+			log.info("Calling runQueryCommand command="+command+" responder="+responder);
 			var msg:MongoMsgQuery = prepareQuery("$cmd", new MongoDocumentQuery(command), null, 0, -1);
 			if (responder == null) responder = new MongoResponder(onResponseRunCommandReady);
 			if (interpreter == null) responder.responseInterpreter = new BasicResponseInterpreter();
@@ -211,7 +212,7 @@ package jmcnet.mongodb.runner
 		}
 		
 		private function onResponseRunCommandReady (response:MongoDocumentResponse, token:*):void {
-			log.info("Calling onResponseRunCommandReady response="+response.toString()+" token="+token);
+			log.info("Calling onResponseRunCommandReady response="+response+" token="+token);
 			// Dispatch the answer
 			log.evt("Dispatching Run command event");
 			this.dispatchEvent(new EventMongoDB(EVT_RUN_COMMAND, response));
@@ -226,7 +227,7 @@ package jmcnet.mongodb.runner
 		}
 		
 		private function onResponseLastError(response:MongoDocumentResponse, token:*):void {
-			log.debug("Calling onResponseLastError response="+response.toString()+" token="+token);
+			log.debug("Calling onResponseLastError response="+response+" token="+token);
 			this.dispatchEvent(new EventMongoDB(EVT_LAST_ERROR, response));
 		}
 		
@@ -423,8 +424,18 @@ package jmcnet.mongodb.runner
 			log.info("EndIf aggregate");
 		}
 		
+		/**
+		 * Search for all collectionName of a database. The result is an ArrayCollection of collectionName (without databasename).
+		 */
+		public function listCollections(responder:MongoResponder=null):void {
+			log.info("Calling listCollections responder="+responder);
+			responder.responseInterpreter = new ListCollectionsResponseInterpreter();
+			queryDoc("system.namespaces", null, responder);
+			log.info("EndIf listCollections");
+		}
+		
 		protected function prepareQuery(collectionName:String, query:MongoDocumentQuery, returnFields:MongoDocument=null, numberToSkip:uint=0, numberToReturn:int=0, tailableCursor:Boolean=false, slaveOk:Boolean=false, noCursorTimeout:Boolean=false, awaitData:Boolean=false, exhaust:Boolean=false, partial:Boolean=false ):MongoMsgQuery {
-			log.debug("Calling prepareQuery collectionName="+collectionName+" query="+query.toString()+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
+			log.debug("Calling prepareQuery collectionName="+collectionName+" query="+query+" returnFields="+ObjectUtil.toString(returnFields)+" numberToSkip="+numberToSkip+" numberToReturn="+numberToReturn);
 			var flags:uint = tailableCursor ? 2:0 +
 				slaveOk ? 4:0 +
 				noCursorTimeout ? 16:0 +
@@ -487,7 +498,7 @@ package jmcnet.mongodb.runner
 		protected function sendMessageToSocket(msg:MongoMsgAbstract, socket:TimedSocket):void {
 			// send the message by writing BSON into socket
 			var bson:ByteArray = msg.toBSON();
-			log.evt("Calling sendMessageToSocket socket #"+socket.id+" msg='"+msg.toString()+"'");
+			log.evt("Calling sendMessageToSocket socket #"+socket.id+" msg='"+msg+"'");
 			if (BSONEncoder.logBSON) log.debug("sendMessageToSocket sending msg : "+HelperByteArray.byteArrayToString(bson));
 			
 			

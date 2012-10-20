@@ -85,7 +85,7 @@ package jmcnet.mongodb.messages
 		override public function get needResponse():Boolean { return true;}
 		
 		override public function toString():String {
-			var msg:String="[MongoMsgQuery : query="+(query != null ? query.toString():"null")+" header=["+(header != null ? header.toString():"null")+"]]";
+			var msg:String="[MongoMsgQuery : query="+query+" header=["+header+"]]";
 			return msg;
 		}
 	}
