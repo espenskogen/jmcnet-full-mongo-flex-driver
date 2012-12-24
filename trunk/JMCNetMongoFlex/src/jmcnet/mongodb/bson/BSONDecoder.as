@@ -26,7 +26,8 @@ package jmcnet.mongodb.bson
 		 */
 		public static function decodeBSONToMongoDocument(ba:ByteArray):MongoDocument {
 			if (ba == null) return null;
-			// ba.position = 0;
+			// issue 19
+			ba.position = 0;
 			ba.endian = Endian.LITTLE_ENDIAN;
 			var result:MongoDocument = bsonReadDocument(ba);
 			return result;

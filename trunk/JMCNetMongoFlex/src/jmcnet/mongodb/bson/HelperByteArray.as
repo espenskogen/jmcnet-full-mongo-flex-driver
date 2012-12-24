@@ -85,7 +85,7 @@ package jmcnet.mongodb.bson
 							result += bsonReadCString(ba) +" : "+ ba.readInt();
 							break;
 						default :
-							throw new ExceptionJMCNetMongoDB("BSON decoder : TypeElement : '"+type+"' not implemented");
+							throw new ExceptionJMCNetMongoDB("BSON HelperByteArray : TypeElement : '"+type+"' not implemented");
 					}
 					first= false;
 					type=ba.readByte();
